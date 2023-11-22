@@ -1,4 +1,5 @@
 from cmu_graphics import *
+import random
 
 class Character:
     def __init__(self, cx, cy):
@@ -48,6 +49,7 @@ class Enemy:
     def __init__(self, enemyType, cx, cy):
         self.cx = cx
         self.cy = cy
+        self.color = 'blue'
         self.enemyType = enemyType
         self.health = 100
         self.powerups = set()
@@ -56,9 +58,9 @@ class Enemy:
         self.hitbox = (self.cx-20, self.cy-20, 40, 40)
     def draw(self):
         drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
-        drawCircle(self.cx, self.cy, 10, fill='red')
+        drawCircle(self.cx, self.cy, 10, fill=self.color)
 
-# this code was directly inspired by CS Academy's 1.4.10 rectanglesOverlap exercise
+# this code is from CS Academy's 1.4.10 rectanglesOverlap exercise
 def rectanglesOverlap(left1, top1, width1, height1,
                       left2, top2, width2, height2):
     bottom1 = top1 + height1
@@ -66,25 +68,34 @@ def rectanglesOverlap(left1, top1, width1, height1,
     right1 = left1 + width1
     right2 = left2 + width2
     return (bottom1 >= top2 and bottom2 >= top1 and right1 >= left2 and right2 >= left1)
+###############################################################################
 
 def onAppStart(app):
     app.mc = Character(app.width/2, app.height/2)
-    app.enemy = Enemy('physical', 200, 200)
+    app.enemyNumber = 3
+    app.enemies = []
     app.arrows = []
+    for i in range(app.enemyNumber):
+        app.enemies.append(Enemy('physical', random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
 
 def onStep(app):
-    left1, top1, width1, height1 = app.enemy.hitbox
-    left2, top2, width2, height2 = app.mc.hitbox
-    if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
-        print('overlapped')
-    if app.arrows != []:
+    for enemy in app.enemies:
+        left1, top1, width1, height1 = enemy.hitbox
+        left2, top2, width2, height2 = app.mc.hitbox
+        if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+            enemy.color = 'red'
+        else:
+            enemy.color = 'blue'
         for arrow in app.arrows:
             arrow.move()
             left1, top1, width1, height1 = arrow.hitbox
-            left2, top2, width2, height2 = app.enemy.hitbox
+            left2, top2, width2, height2 = enemy.hitbox
             
             if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+                app.enemies.remove(enemy)
                 app.arrows.remove(arrow)
+    for arrow in app.arrows:
+        arrow.move()
 
 def onKeyHold(app, keys):
     if 'up' in keys or 'w' in keys:
@@ -102,10 +113,17 @@ def onMousePress(app, mx, my):
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill='gray')
+    drawCharacterHealth(app)
     app.mc.draw()
-    app.enemy.draw()
+    for enemy in app.enemies:
+        enemy.draw()
     for arrow in app.arrows:
         arrow.draw()
+
+def drawCharacterHealth(app):
+    drawRect(490, 0, 150, 100, fill='darkgray')
+    drawLabel(f'♥   {app.mc.health}', 550, 25, font='symbols', size=30, fill='darkred')
+    drawLabel(f'🫧  {app.mc.oxygen}', 550, 50, font='symbols, size=30')
 
 def main():
     runApp(width = 640, height = 480)
