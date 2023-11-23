@@ -17,6 +17,11 @@ class Character:
         self.cx += dx
         self.cy += dy
         self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
+    def drawHealthOxygen(self):
+        drawRect(490, 0, 150, 100, fill='darkgray')
+        drawLabel(f'♥   {self.health}', 550, 25, font='symbols', size=30, fill='darkred')
+        drawLabel(f'○   {self.oxygen}', 550, 65, font='symbols', size=30, fill='blue')
+
     
 class Arrow:
     def __init__(self, startX, startY, x, y):
@@ -45,6 +50,7 @@ class Arrow:
         self.startY += self.dy  
         self.hitbox = (self.startX - 10, self.startY-10, 50, 25)
 
+
 class Enemy:
     def __init__(self, enemyType, cx, cy):
         self.cx = cx
@@ -59,6 +65,10 @@ class Enemy:
     def draw(self):
         drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
         drawCircle(self.cx, self.cy, 10, fill=self.color)
+    def drawHealth(self):
+        drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
+        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10, fill='limegreen')
+
 
 # this code is from CS Academy's 1.4.10 rectanglesOverlap exercise
 def rectanglesOverlap(left1, top1, width1, height1,
@@ -90,9 +100,10 @@ def onStep(app):
             arrow.move()
             left1, top1, width1, height1 = arrow.hitbox
             left2, top2, width2, height2 = enemy.hitbox
-            
             if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
-                app.enemies.remove(enemy)
+                enemy.health -= 10
+                if enemy.health <= 0:
+                    app.enemies.remove(enemy)
                 app.arrows.remove(arrow)
     for arrow in app.arrows:
         arrow.move()
@@ -113,17 +124,14 @@ def onMousePress(app, mx, my):
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill='gray')
-    drawCharacterHealth(app)
     app.mc.draw()
+    app.mc.drawHealthOxygen()
     for enemy in app.enemies:
         enemy.draw()
+        enemy.drawHealth()
     for arrow in app.arrows:
         arrow.draw()
 
-def drawCharacterHealth(app):
-    drawRect(490, 0, 150, 100, fill='darkgray')
-    drawLabel(f'♥   {app.mc.health}', 550, 25, font='symbols', size=30, fill='darkred')
-    drawLabel(f'🫧  {app.mc.oxygen}', 550, 50, font='symbols, size=30')
 
 def main():
     runApp(width = 640, height = 480)
