@@ -35,8 +35,8 @@ class Arrow:
         vecX, vecY = self.x - self.startX, self.y-self.startY
         mag = ((vecX)**2 + (vecY)**2)**0.5
         unitvecX, unitvecY = vecX/mag, vecY/mag
-        unitvecX *= 25
-        unitvecY *= 25
+        unitvecX *= 5
+        unitvecY *= 5
         self.dx, self.dy = unitvecX, unitvecY
     def draw(self):
         vecX, vecY = self.x - self.startX, self.y-self.startY
@@ -52,11 +52,10 @@ class Arrow:
 
 
 class Enemy:
-    def __init__(self, enemyType, cx, cy):
+    def __init__(self, cx, cy):
         self.cx = cx
         self.cy = cy
-        self.color = 'blue'
-        self.enemyType = enemyType
+        self.color = 'pink'
         self.health = 100
         self.powerups = set()
         self.speed = 5
@@ -69,7 +68,27 @@ class Enemy:
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
         drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10, fill='limegreen')
 
-
+class EnemyRanged:
+    def __init__(self, cx, cy):
+        self.cx = cx
+        self.cy = cy
+        self.color = 'saddleBrown'
+        self.health = 100
+        self.powerups = set()
+        self.speed = 5
+        self.arrows = []
+        self.hitbox = (self.cx-20, self.cy-20, 40, 40)
+    def draw(self):
+        drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
+        drawCircle(self.cx, self.cy, 10, fill=self.color)
+    def drawHealth(self):
+        drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
+        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10, fill='limegreen')
+    def attack(self, app):
+        newArrow = Arrow(self.cx, self.cy, app.mc.cx, app.mc.cy)
+        app.arrows.append(newArrow)
+        # newArrow.draw()
+    
 # this code is from CS Academy's 1.4.10 rectanglesOverlap exercise
 def rectanglesOverlap(left1, top1, width1, height1,
                       left2, top2, width2, height2):
@@ -81,30 +100,35 @@ def rectanglesOverlap(left1, top1, width1, height1,
 ###############################################################################
 
 def onAppStart(app):
+    app.enemyCounter = 0
     app.mc = Character(app.width/2, app.height/2)
-    app.enemyNumber = 3
+    app.enemyNumber = 1
     app.enemies = []
     app.arrows = []
     for i in range(app.enemyNumber):
-        app.enemies.append(Enemy('physical', random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
+        app.enemies.append(EnemyRanged(random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
+        # app.enemies.append(Enemy(random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
 
 def onStep(app):
+    app.enemyCounter += 1
+    if app.enemyCounter == 25:
+        app.enemyCounter %= 25
     for enemy in app.enemies:
         left1, top1, width1, height1 = enemy.hitbox
         left2, top2, width2, height2 = app.mc.hitbox
-        if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
-            enemy.color = 'red'
-        else:
-            enemy.color = 'blue'
+        # if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+        #     enemy.color = 'red'
+        # else:
+        #     enemy.color = 'blue'
         for arrow in app.arrows:
             arrow.move()
             left1, top1, width1, height1 = arrow.hitbox
             left2, top2, width2, height2 = enemy.hitbox
-            if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
-                enemy.health -= 10
-                if enemy.health <= 0:
-                    app.enemies.remove(enemy)
-                app.arrows.remove(arrow)
+            # if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+            #     enemy.health -= 10
+            #     if enemy.health <= 0:
+            #         app.enemies.remove(enemy)
+            #     app.arrows.remove(arrow)
     for arrow in app.arrows:
         arrow.move()
 
@@ -129,6 +153,8 @@ def redrawAll(app):
     for enemy in app.enemies:
         enemy.draw()
         enemy.drawHealth()
+        if app.enemyCounter == 2:
+            enemy.attack(app)
     for arrow in app.arrows:
         arrow.draw()
 
