@@ -23,8 +23,10 @@ class Character:
         if self.cy >= 480: self.cy = 475
     def drawHealthOxygen(self):
         drawRect(490, 0, 150, 100, fill='darkgray')
-        drawLabel(f'♥   {self.health}', 550, 25, font='symbols', size=30, fill='darkred')
-        drawLabel(f'○   {self.oxygen}', 550, 65, font='symbols', size=30, fill='blue')
+        drawLabel(f'♥   {self.health}', 550, 25, font='symbols', 
+            size=30, fill='darkred')
+        drawLabel(f'○   {self.oxygen}', 550, 65, font='symbols', 
+            size=30, fill='blue')
     def loseOxygen(self, app):
         self.oxygen -= 5
         if self.oxygen <= 0:
@@ -69,6 +71,7 @@ class EnemyPhysical:
     def __init__(self, cx, cy):
         self.cx = cx
         self.cy = cy
+        self.type = 'physical'
         self.color = 'pink'
         self.health = 100
         self.powerups = set()
@@ -80,23 +83,29 @@ class EnemyPhysical:
         drawCircle(self.cx, self.cy, 10, fill=self.color)
     def drawHealth(self):
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
-        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10, fill='limegreen')
+        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
+             fill='limegreen')
     def attack(self, app):
         targetX = app.mc.cx
         targetY = app.mc.cy
         if targetX - self.cx > 0:
             self.cx += self.speed
+            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cx -= self.speed
+            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         if targetY - self.cy > 0:
             self.cy += self.speed
+            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cy -= self.speed
+            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
 
 class EnemyRanged:
     def __init__(self, cx, cy):
         self.cx = cx
         self.cy = cy
+        self.type = 'ranged'
         self.color = 'saddleBrown'
         self.health = 100
         self.powerups = set()
@@ -108,11 +117,13 @@ class EnemyRanged:
         drawCircle(self.cx, self.cy, 10, fill=self.color)
     def drawHealth(self):
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
-        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10, fill='limegreen')
+        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
+             fill='limegreen')
     def attack(self, app):
         newArrow = Arrow(self.cx, self.cy, app.mc.cx, app.mc.cy, 'enemy')
         app.arrows.append(newArrow)
-    
+
+###############################################################################
 # this code is from CS Academy's 1.4.10 rectanglesOverlap exercise
 def rectanglesOverlap(left1, top1, width1, height1,
                       left2, top2, width2, height2):
@@ -124,22 +135,27 @@ def rectanglesOverlap(left1, top1, width1, height1,
 ###############################################################################
 
 def onAppStart(app):
-    app.enemyTypes = ['physical', 'ranged']
+    # initialize game states
     app.gameOver = False
     app.win = False
+
+    # initiliaze empty entity lists
     app.oxygen = []
+    app.enemies = []
+    app.arrows = []
+
+    app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
     app.mc = Character(app.width/2, app.height/2)
     app.enemyNumber = 3
-    app.enemies = []
-    app.arrows = []
     for i in range(app.enemyNumber):
         enemyType = random.randint(0, 1)
         if enemyType == 0:
-            app.enemies.append(EnemyPhysical(random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
+            (app.enemies.append(EnemyPhysical(random.randint(50, app.width - 200), 
+                random.randint(100, app.height - 50))))
         elif enemyType == 1:
-            app.enemies.append(EnemyRanged(random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
-        # app.enemies.append(Enemy(random.randint(50, app.width - 200), random.randint(100, app.height - 50)))
+            (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
+                 random.randint(100, app.height - 50))))
 
 def onStep(app):
     if app.enemyNumber == 0: 
@@ -152,22 +168,34 @@ def onStep(app):
     for enemy in app.enemies:
         left1, top1, width1, height1 = enemy.hitbox
         left2, top2, width2, height2 = app.mc.hitbox
-        # if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
-        #     enemy.color = 'red'
-        # else:
-        #     enemy.color = 'blue'
+        # check for physical enemy attacks
+        if (rectanglesOverlap(left1-10, top1-10, width1+20, height1+20, left2-10, 
+            top2-10, width2+20, height2+20) and enemy.type == 'physical'
+            and app.counter == 10):
+            enemy.color = 'red'
+            hitChance = random.randint(0, 1)
+            if hitChance == 0:
+                # mc is hit
+                app.mc.health -= 1
+        elif enemy.type == 'physical':
+            enemy.color = 'pink'
         for arrow in app.arrows:
             arrow.move()
             left1, top1, width1, height1 = arrow.hitbox
             left2, top2, width2, height2 = enemy.hitbox
-            if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2) and arrow.entity =='character':
+            # check if mc hits an enemy
+            if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
+                and arrow.entity =='character'):
                 enemy.health -= 10
+                # check if enemy dies
                 if enemy.health <= 0:
                     app.enemies.remove(enemy)
                     app.enemyNumber -= 1
                 app.arrows.remove(arrow)
             left2, top2, width2, height2 = app.mc.hitbox
-            if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2) and arrow.entity =='enemy':
+            # check if mc is hit
+            if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
+                and arrow.entity =='enemy'):
                 app.mc.health -= 1
                 if app.mc.health <= 0:
                     app.mc.health = 0
@@ -178,8 +206,10 @@ def onStep(app):
     for arrow in app.arrows:
         arrow.move()
         # deletes arrows that go off screen
-        if arrow.startX < 0 or arrow.startX > 640 or arrow.startY < 0 or arrow.startY > 480:
+        if (arrow.startX < 0 or arrow.startX > 640
+            or arrow.startY < 0 or arrow.startY > 480):
             app.arrows.remove(arrow)
+    # draw oxygen
     for oxygen in app.oxygen:
         x, y = oxygen
         left1, top1, width1, height1 = app.mc.hitbox
@@ -190,6 +220,7 @@ def onStep(app):
 
 def onKeyHold(app, keys):
     if app.gameOver or app.win: return
+    # mc movement
     if 'up' in keys or 'w' in keys:
         app.mc.move(0, -5)
     if 'down' in keys or 's' in keys: 
@@ -207,12 +238,10 @@ def onMousePress(app, mx, my):
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill='gray')
     if app.win:
-        drawLabel('YOU WONNNNNNN!!!!', app.width/2, app.height/2)
+        drawLabel('YOU WON!', app.width/2, app.height/2)
     elif app.gameOver:
-        drawLabel('you died :(', app.width/2, app.height/2)
+        drawLabel('YOU LOST!', app.width/2, app.height/2)
     else:
-        app.mc.draw()
-        app.mc.drawHealthOxygen()
         for enemy in app.enemies:
             enemy.draw()
             enemy.drawHealth()
@@ -224,6 +253,8 @@ def redrawAll(app):
             addOxygen(app)
         for oxygenX, oxygenY in app.oxygen:
             drawCircle(oxygenX, oxygenY, 10, fill='blue')
+        app.mc.draw()
+        app.mc.drawHealthOxygen()
 
 def addOxygen(app):
     newX = random.randint(50, app.width - 200)
@@ -234,10 +265,3 @@ def main():
     runApp(width = 640, height = 480)
 
 main()
-
-'''
-notes
-- must destroy arrows once they get off the page, too many objects
-- fix the collisions so an enemy's arrows don't hurt themselves - may have to split up arrow class
-- 50% success for enemy
-'''
