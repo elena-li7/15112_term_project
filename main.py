@@ -1,5 +1,6 @@
 from cmu_graphics import *
 import random
+import math
 
 class Character:
     def __init__(self, cx, cy):
@@ -123,6 +124,57 @@ class EnemyRanged:
         newArrow = Arrow(self.cx, self.cy, app.mc.cx, app.mc.cy, 'enemy')
         app.arrows.append(newArrow)
 
+class EnemyBoss:
+    def __init__(self, cx, cy):
+        self.cx = cx
+        self.cy = cy
+        self.type = 'boss'
+        self.color = 'red'
+        self.health = 100
+        self.powerups = set()
+        self.speed = 5
+        self.arrows = []
+        self.hitbox = (self.cx-20, self.cy-20, 40, 40)
+    def draw(self):
+        drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
+        drawCircle(self.cx, self.cy, 10, fill=self.color)
+        drawCircle(self.cx, self.cy, 150, fill=None, border='black')
+    def drawHealth(self):
+        drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
+        drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
+             fill='limegreen')
+    def laserAttack(self, app, state):
+        hitChance = random.randint(0, 1)
+        distX = app.mc.cx - self.cx
+        distY = app.mc.cy - self.cy
+        dist = distance(app.mc.cx, app.mc.cy, self.cx, self.cy)
+        angle = math.asin(distY / dist)
+        
+        if distX > 0:
+            angle = math.degrees(angle)
+        else:
+            angle = -1 * math.degrees(angle)
+        
+        if state == 'attack': 
+            if hitChance == 1:
+                # does not hit
+                angle += 10
+            else:
+                # does hit
+                app.mc.health -= 5
+            opacity = 100
+        elif state == 'warning':
+            opacity = 20
+        else:
+            opacity = 0
+        drawRect(self.cx, self.cy, 1000, 10, rotateAngle=angle, align ='center', opacity = opacity, fill='red')
+    def quakeAttack(self, app):
+        pass
+    def lastDitchAttack(self, app):
+        pass
+    def explode(self, app):
+        pass
+
 ###############################################################################
 # this code is from CS Academy's 1.4.10 rectanglesOverlap exercise
 def rectanglesOverlap(left1, top1, width1, height1,
@@ -133,6 +185,9 @@ def rectanglesOverlap(left1, top1, width1, height1,
     right2 = left2 + width2
     return (bottom1 >= top2 and bottom2 >= top1 and right1 >= left2 and right2 >= left1)
 ###############################################################################
+
+def distance(x0, y0, x1, y1):
+    return ( (x0-x1)**2 + (y0-y1)**2 ) **0.5
 
 def onAppStart(app):
     # initialize game states
@@ -147,7 +202,7 @@ def onAppStart(app):
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
     app.mc = Character(app.width/2, app.height/2)
-    app.enemyNumber = 3
+    app.enemyNumber = 1
     for i in range(app.enemyNumber):
         enemyType = random.randint(0, 1)
         if enemyType == 0:
@@ -156,9 +211,12 @@ def onAppStart(app):
         elif enemyType == 1:
             (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
                  random.randint(100, app.height - 50))))
+    
+    app.isBoss = True
+    app.boss = EnemyBoss(200, 200)
 
 def onStep(app):
-    if app.enemyNumber == 0: 
+    if app.enemyNumber == 0 and app.isBoss == False: 
         app.win = True
     if app.gameOver or app.win: return
     app.counter += 0.5
@@ -181,8 +239,7 @@ def onStep(app):
             enemy.color = 'pink'
         for arrow in app.arrows:
             arrow.move()
-            left1, top1, width1, height1 = arrow.hitbox
-            left2, top2, width2, height2 = enemy.hitbox
+            left2, top2, width2, height2 = arrow.hitbox
             # check if mc hits an enemy
             if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
                 and arrow.entity =='character'):
@@ -202,6 +259,18 @@ def onStep(app):
                     app.gameOver = True
                     print('you died!!!!')
                 app.arrows.remove(arrow)
+    # check if mc hits boss
+    for arrow in app.arrows:
+            arrow.move()
+            if app.isBoss:
+                left1, top1, width1, height1 = arrow.hitbox
+                left2, top2, width2, height2 = app.boss.hitbox
+                if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
+                and arrow.entity =='character'):
+                    app.arrows.remove(arrow)
+                    app.boss.health -= 5
+                    if app.boss.health <= 0:
+                        app.isBoss = False
 
     for arrow in app.arrows:
         arrow.move()
@@ -242,6 +311,22 @@ def redrawAll(app):
     elif app.gameOver:
         drawLabel('YOU LOST!', app.width/2, app.height/2)
     else:
+        if app.isBoss:
+            app.boss.draw()
+            app.boss.drawHealth()
+            if app.boss.health <= 25 and app.boss.health > 0:
+                app.boss.lastDitchAttack(app)
+            elif app.boss.health <= 0:
+                app.boss.explode(app)
+            if distance(app.boss.cx, app.boss.cy, app.mc.cx, app.mc.cy) <= 160:
+                app.boss.quakeAttack(app)
+            else:
+                if 0 <= app.counter < 10:
+                    app.boss.laserAttack(app, 'warning')
+                elif app.counter == 10:
+                    app.boss.laserAttack(app, 'attack')
+        
+
         for enemy in app.enemies:
             enemy.draw()
             enemy.drawHealth()
@@ -255,6 +340,7 @@ def redrawAll(app):
             drawCircle(oxygenX, oxygenY, 10, fill='blue')
         app.mc.draw()
         app.mc.drawHealthOxygen()
+
 
 def addOxygen(app):
     newX = random.randint(50, app.width - 200)
