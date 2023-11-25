@@ -154,7 +154,6 @@ class EnemyBoss:
             angle = math.degrees(angle)
         else:
             angle = -1 * math.degrees(angle)
-        
         if state == 'attack': 
             if hitChance == 1:
                 # does not hit
@@ -167,9 +166,22 @@ class EnemyBoss:
             opacity = 20
         else:
             opacity = 0
-        drawRect(self.cx, self.cy, 1000, 10, rotateAngle=angle, align ='center', opacity = opacity, fill='red')
-    def quakeAttack(self, app):
-        pass
+        drawRect(self.cx, self.cy, 1000, 10, rotateAngle=angle, align ='center', 
+                 opacity = opacity, fill='red')
+    def quakeAttack(self, app, state):
+        # cx, cy = random.randint(self.cx - 100, self.cx + 100), random.randint(self.cy - 100, self.cy + 100) 
+        targetX, targetY = app.mc.cx, app.mc.cy
+        hitChance = random.randint(0, 3)
+        if state == 'attack':
+            if hitChance == 0:
+                # 25% chance of hitting
+                opacity = 100
+                drawCircle(targetX, targetY, 30, fill='purple', opacity = opacity)
+                app.mc.health -= 15
+        elif state == 'warning':
+            opacity = 20
+            drawCircle(targetX, targetY, 30, fill='purple', opacity=opacity)
+
     def lastDitchAttack(self, app):
         pass
     def explode(self, app):
@@ -202,7 +214,7 @@ def onAppStart(app):
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
     app.mc = Character(app.width/2, app.height/2)
-    app.enemyNumber = 1
+    app.enemyNumber = 2
     for i in range(app.enemyNumber):
         enemyType = random.randint(0, 1)
         if enemyType == 0:
@@ -312,20 +324,22 @@ def redrawAll(app):
         drawLabel('YOU LOST!', app.width/2, app.height/2)
     else:
         if app.isBoss:
-            app.boss.draw()
-            app.boss.drawHealth()
             if app.boss.health <= 25 and app.boss.health > 0:
                 app.boss.lastDitchAttack(app)
             elif app.boss.health <= 0:
                 app.boss.explode(app)
             if distance(app.boss.cx, app.boss.cy, app.mc.cx, app.mc.cy) <= 160:
-                app.boss.quakeAttack(app)
+                if 0 <= app.counter < 15:
+                    app.boss.quakeAttack(app, 'warning')
+                elif app.counter == 15:
+                    app.boss.quakeAttack(app, 'attack')
             else:
                 if 0 <= app.counter < 10:
                     app.boss.laserAttack(app, 'warning')
                 elif app.counter == 10:
                     app.boss.laserAttack(app, 'attack')
-        
+            app.boss.draw()
+            app.boss.drawHealth()
 
         for enemy in app.enemies:
             enemy.draw()
