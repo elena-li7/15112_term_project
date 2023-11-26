@@ -136,6 +136,7 @@ class EnemyBoss:
         self.speed = 5
         self.arrows = []
         self.hitbox = (self.cx-20, self.cy-20, 40, 40)
+        self.attackPower = 5
     def draw(self):
         drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
         drawCircle(self.cx, self.cy, 10, fill=self.color)
@@ -161,7 +162,7 @@ class EnemyBoss:
                 angle += 10
             else:
                 # does hit
-                app.mc.health -= 5
+                app.mc.health -= self.attackPower
             opacity = 100
         elif state == 'warning':
             opacity = 20
@@ -178,15 +179,14 @@ class EnemyBoss:
                 # 25% chance of hitting
                 opacity = 100
                 drawCircle(targetX, targetY, 30, fill='purple', opacity = opacity)
-                app.mc.health -= 15
+                app.mc.health -= self.attackPower * 2
         elif state == 'warning':
             opacity = 20
             drawCircle(targetX, targetY, 30, fill='purple', opacity=opacity)
 
     def lastDitchAttack(self, app):
-        pass
-    def explode(self, app):
-        pass
+        self.color='gold'
+        self.attackPower = 10
 
 ###############################################################################
 # this code is from CS Academy's 1.4.10 rectanglesOverlap exercise
@@ -206,6 +206,7 @@ def onAppStart(app):
     # initialize game states
     app.gameOver = False
     app.win = False
+    app.bossKilled = False
 
     # initiliaze empty entity lists
     app.oxygen = []
@@ -217,20 +218,26 @@ def onAppStart(app):
     app.mc = Character(25, 25)
     app.enemyNumber = 2
     for i in range(app.enemyNumber):
-        enemyType = random.randint(0, 1)
-        if enemyType == 0:
-            (app.enemies.append(EnemyPhysical(random.randint(50, app.width - 200), 
-                random.randint(100, app.height - 50))))
-        elif enemyType == 1:
-            (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
-                 random.randint(100, app.height - 50))))
+        initializeNewEnemy(app)
     app.isBoss = True
     app.boss = EnemyBoss(app.width/2, app.height/2)
 
+def initializeNewEnemy(app):
+    enemyType = random.randint(0, 1)
+    if enemyType == 0:
+        (app.enemies.append(EnemyPhysical(random.randint(50, app.width - 200), 
+            random.randint(100, app.height - 50))))
+    elif enemyType == 1:
+        (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
+                random.randint(100, app.height - 50))))
+
 def onStep(app):
+    if app.mc.oxygen <= 0 or app.mc.health <= 0:
+        app.gameOver = True
     if app.enemyNumber == 0 and app.isBoss == False: 
         app.win = True
-    if app.gameOver or app.win: return
+    if app.gameOver or app.win: 
+        return
     app.counter += 0.5
     if app.counter == 20:
         app.counter = 0
@@ -269,7 +276,6 @@ def onStep(app):
                 if app.mc.health <= 0:
                     app.mc.health = 0
                     app.gameOver = True
-                    print('you died!!!!')
                 app.arrows.remove(arrow)
     # check if mc hits boss
     for arrow in app.arrows:
@@ -283,6 +289,7 @@ def onStep(app):
                     app.boss.health -= app.mc.attackPower / 2
                     if app.boss.health <= 0:
                         app.isBoss = False
+                        app.bossKilled = True
     for arrow in app.arrows:
         arrow.move()
         # deletes arrows that go off screen
@@ -325,8 +332,6 @@ def redrawAll(app):
         if app.isBoss:
             if app.boss.health <= 25 and app.boss.health > 0:
                 app.boss.lastDitchAttack(app)
-            elif app.boss.health <= 0:
-                app.boss.explode(app)
             if distance(app.boss.cx, app.boss.cy, app.mc.cx, app.mc.cy) <= 160:
                 app.mc.attackPower = 20
                 if 0 <= app.counter < 15:
@@ -341,6 +346,11 @@ def redrawAll(app):
                     app.boss.laserAttack(app, 'attack')
             app.boss.draw()
             app.boss.drawHealth()
+        elif app.bossKilled:
+            # boss explodes and deals a large amount of dmg              
+            drawCircle(app.width/2, app.height/2, 100, fill='orange')
+            if distance(app.width/2, app.height/2, app.mc.cx, app.mc.cy) <= 110:
+                app.mc.health -= 25
         for enemy in app.enemies:
             enemy.draw()
             enemy.drawHealth()
@@ -364,9 +374,3 @@ def main():
     runApp(width = 640, height = 480)
 
 main()
-
-'''
-notes:
-- add last ditch attack (boss under 25% health)
-- add explosion for boss
-'''
