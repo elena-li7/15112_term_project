@@ -13,7 +13,6 @@ class Character:
         self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
         self.attackPower = 10
     def draw(self):
-        drawRect(self.cx - 10, self.cy - 10, 20, 20, fill='white')
         drawCircle(self.cx, self.cy, 10)
     def move(self, dx, dy):
         self.cx += dx
@@ -34,7 +33,6 @@ class Character:
         if self.oxygen <= 0:
             self.oxygen = 0
             app.gameOver = True
-            print('you died!!!!!!')
     def gainOxygen(self):
         self.oxygen += 10
         if self.oxygen > 100:
@@ -68,7 +66,6 @@ class Arrow:
         self.startY += self.dy  
         self.hitbox = (self.startX - 10, self.startY-10, 50, 25)
 
-
 class EnemyPhysical:
     def __init__(self, cx, cy):
         self.cx = cx
@@ -77,11 +74,10 @@ class EnemyPhysical:
         self.color = 'pink'
         self.health = 100
         self.powerups = set()
-        self.speed = 10
+        self.speed = 20
         self.arrows = []
         self.hitbox = (self.cx-20, self.cy-20, 40, 40)
     def draw(self):
-        drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
         drawCircle(self.cx, self.cy, 10, fill=self.color)
     def drawHealth(self):
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
@@ -93,15 +89,27 @@ class EnemyPhysical:
         if targetX - self.cx > 0:
             self.cx += self.speed
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
+            if not canMove(app, self.hitbox):
+                self.cx -= self.speed
+                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cx -= self.speed
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
+            if not canMove(app, self.hitbox):
+                self.cx += self.speed
+                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         if targetY - self.cy > 0:
             self.cy += self.speed
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
+            if not canMove(app, self.hitbox):
+                self.cy -= self.speed
+                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cy -= self.speed
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
+            if not canMove(app, self.hitbox):
+                self.cy += self.speed
+                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
 
 class EnemyRanged:
     def __init__(self, cx, cy):
@@ -115,7 +123,6 @@ class EnemyRanged:
         self.arrows = []
         self.hitbox = (self.cx-20, self.cy-20, 40, 40)
     def draw(self):
-        drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
         drawCircle(self.cx, self.cy, 10, fill=self.color)
     def drawHealth(self):
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
@@ -138,7 +145,6 @@ class EnemyBoss:
         self.hitbox = (self.cx-20, self.cy-20, 40, 40)
         self.attackPower = 5
     def draw(self):
-        drawRect(self.cx-20, self.cy-20, 40, 40, fill='white')
         drawCircle(self.cx, self.cy, 10, fill=self.color)
         drawCircle(self.cx, self.cy, 150, fill=None, border='black')
     def drawHealth(self):
@@ -241,7 +247,7 @@ def initializeNewEnemy(app):
         (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
                 random.randint(100, app.height - 50))))
 
-def onStep(app):
+def combat_onStep(app):
     if app.mc.oxygen <= 0 or app.mc.health <= 0:
         app.gameOver = True
     if app.enemyNumber == 0 and app.isBoss == False: 
@@ -263,11 +269,18 @@ def onStep(app):
             hitChance = random.randint(0, 1)
             if hitChance == 0:
                 # mc is hit
-                app.mc.health -= 1
+                app.mc.health -= 10
+                if app.mc.health <= 0:
+                    app.mc.health = 0
+                    app.gameOver = True
         elif enemy.type == 'physical':
             enemy.color = 'pink'
         for arrow in app.arrows:
             arrow.move()
+            if not canMove(app, arrow.hitbox):
+                app.arrows.remove(arrow)
+                continue
+            left1, top1, width1, height1 = enemy.hitbox
             left2, top2, width2, height2 = arrow.hitbox
             # check if mc hits an enemy
             if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
@@ -278,11 +291,11 @@ def onStep(app):
                     app.enemies.remove(enemy)
                     app.enemyNumber -= 1
                 app.arrows.remove(arrow)
-            left2, top2, width2, height2 = app.mc.hitbox
+            left1, top1, width1, height1 = app.mc.hitbox
             # check if mc is hit
             if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
                 and arrow.entity =='enemy'):
-                app.mc.health -= 1
+                app.mc.health -= 5
                 if app.mc.health <= 0:
                     app.mc.health = 0
                     app.gameOver = True
@@ -290,6 +303,9 @@ def onStep(app):
     # check if mc hits boss
     for arrow in app.arrows:
             arrow.move()
+            if not canMove(app, arrow.hitbox):
+                app.arrows.remove(arrow)
+                continue
             if app.isBoss:
                 left1, top1, width1, height1 = arrow.hitbox
                 left2, top2, width2, height2 = app.boss.hitbox
@@ -302,6 +318,9 @@ def onStep(app):
                         app.bossKilled = True
     for arrow in app.arrows:
         arrow.move()
+        if not canMove(app, arrow.hitbox):
+            app.arrows.remove(arrow)
+            continue
         # deletes arrows that go off screen
         if (arrow.startX < 0 or arrow.startX > 640
             or arrow.startY < 0 or arrow.startY > 480):
@@ -315,32 +334,53 @@ def onStep(app):
             app.oxygen.remove(oxygen)
             app.mc.gainOxygen()
 
-def onKeyHold(app, keys):
+def combat_onKeyPress(app, key):
+    if key == 'p':
+        setActiveScreen('pause')
+
+def combat_onKeyHold(app, keys):
     if app.gameOver or app.win: return
     # mc movement
     if 'up' in keys or 'w' in keys:
         app.mc.move(0, -5)
+        if not canMove(app, app.mc.hitbox):
+            app.mc.move(0, 5)
     if 'down' in keys or 's' in keys: 
         app.mc.move(0, 5)
+        if not canMove(app, app.mc.hitbox):
+            app.mc.move(0, -5)
     if 'right' in keys or 'd' in keys:
         app.mc.move(5, 0)
+        if not canMove(app, app.mc.hitbox):
+            app.mc.move(-5, 0)
     if 'left' in keys or 'a' in keys:
         app.mc.move(-5, 0)
+        if not canMove(app, app.mc.hitbox):
+            app.mc.move(5, 0)
 
-def onMousePress(app, mx, my):
+def canMove(app, entity):
+    left1, top1, width1, height1 = entity
+    for obstacle in app.obstacles:
+        left2, top2, width2, height2 = obstacle
+        if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+            return False
+    return True
+    
+def combat_onMousePress(app, mx, my):
     if app.gameOver or app.win: return
     newArrow = Arrow(app.mc.cx, app.mc.cy, mx, my, 'character')
     app.arrows.append(newArrow)
 
-def redrawAll(app):
+def combat_redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill='gray')
-    for obstacle in app.obstacles:
-        x, y, width, height = obstacle
-        drawRect(x, y, width, height, fill='darkslategray')
+    if not app.gameOver and not app.win:
+        for obstacle in app.obstacles:
+            x, y, width, height = obstacle
+            drawRect(x, y, width, height, fill='darkslategray')
     if app.win:
-        drawLabel('YOU WON!', app.width/2, app.height/2)
+        setActiveScreen('win')
     elif app.gameOver:
-        drawLabel('YOU LOST!', app.width/2, app.height/2)
+        setActiveScreen('gameOver')
     else:
         if app.isBoss:
             if app.boss.health <= 25 and app.boss.health > 0:
@@ -390,15 +430,106 @@ def generateObstacle(app):
     x, y = random.randint(0, 590), random.randint(0, 430)
     return (startX+x, startY+y, width, height)
 
+#--------------
+def pause_onKeyPress(app, key):
+    if key == 'p':
+        setActiveScreen('combat')
+
+def pause_redrawAll(app):
+    drawRect(0, 0, app.width, app.height)
+    drawLabel('PAUSED.', app.width/2, 100, fill=rgb(176, 120, 30), bold=True, size=30)
+    drawRect(app.width/2 - 100, 200, 200, 50, fill='moccasin')
+    drawRect(app.width/2 - 100, 275, 200, 50, fill='moccasin')
+    drawLabel('resume', app.width/2, 225, fill=rgb(176, 120, 30), size=20)
+    drawLabel('quit', app.width/2, 300, fill=rgb(176, 120, 30), size=20)
+
+def pause_onMousePress(app, mx, my):
+    if app.width/2-100 <= mx <= app.width/2+100 and 200 <= my <= 250:
+        setActiveScreen('combat')
+    if app.width/2-100 <= mx <= app.width/2+100 and 275 <= my <= 325:
+        setActiveScreen('titleScreen')
+#--------------
+def titleScreen_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('MOONLIGHT ARCHER', app.width/2, 100, fill=rgb(176, 120, 30), size=25, bold=True)
+    drawLabel('super cool logo', 450, app.height/2, fill='gold')
+    drawRect(100, app.height/2 - 50, 150, 50, fill='papayaWhip', border='gold', borderWidth=5)
+    drawRect(100, app.height/2 + 50, 150, 50, fill='papayaWhip', border='gold', borderWidth=5)
+    drawLabel('START', 175, app.height/2 - 25, fill=rgb(176, 120, 30), size=20)
+    drawLabel('TUTORIAL', 175, app.height/2 + 75, fill=rgb(176, 120, 30), size=20)
+
+def titleScreen_onMousePress(app, mx, my):
+    if 100 <= mx <= 250 and app.height/2 - 50 <= my <= app.height/2:
+        setActiveScreen('phaseSelection')
+    if 100 <= mx <= 250 and app.height/2 + 50 <= my <= app.height/2 + 100:
+        setActiveScreen('tutorial')
+#--------------
+def tutorial_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawRect(50, 50, app.width-100, app.height-100, fill=None, border='moccasin', borderWidth=5)
+    drawRect(app.width/2 - 75, 25, 150, 50)
+    drawLabel('TUTORIAL', app.width/2, 50, fill=rgb(176, 120, 30), size=25, bold=True)
+    drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
+    drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
+
+def tutorial_onMousePress(app, mx, my):
+    if 80 <= mx <= 130 and 350 <= my <= 400:
+        setActiveScreen('titleScreen')
+#--------------
+def gameOver_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('GAME', app.width/2, 100, fill='darkRed', size=50)
+    drawLabel('OVER', app.width/2, 175, fill='darkRed', size=50)
+#--------------
+def win_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('you won!', app.width/2, app.height/2, fill=rgb(176, 120, 30), size=50)
+#--------------
+def phaseSelection_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('PHASE SELECTION', app.width/2, 50, fill=rgb(176, 120, 30), size=30)
+    drawRect(app.width/5 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
+    drawRect(app.width/5*2 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
+    drawRect(app.width/5*3 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
+    drawRect(app.width/5*4 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
+    drawLabel('I', app.width/5, 125, fill='moccasin', size=30, bold=True)
+    drawLabel('II', app.width/5*2, 125, fill='moccasin', size=30, bold=True)
+    drawLabel('III', app.width/5*3, 125, fill='moccasin', size=30, bold=True)
+    drawLabel('IV', app.width/5*4, 125, fill='moccasin', size=30, bold=True)
+
+def phaseSelection_onMousePress(app, mx, my):
+    if 100 <= my <= app.height-100:
+        if app.width/5 - 45 <= mx <= app.width/5 + 45:
+            setActiveScreen('phaseOne')
+        elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45:
+            setActiveScreen('phaseTwo')
+        elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45:
+            setActiveScreen('phaseThree')
+        elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45:
+            setActiveScreen('phaseFour')
+#------------
+def phaseOne_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('FIRST QUARTER', app.width/2, 75, fill='white', bold=True, size=30)
+    drawCircle(app.width/2, app.height/2, 100, fill='white')
+    drawArc(app.width/2, app.height/2, 190, 190, 90, 180, fill='black')
+#------------
+def phaseTwo_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('FULL MOON', app.width/2, 75, fill='white', bold=True, size=30)
+    drawCircle(app.width/2, app.height/2, 100, fill='white')
+#------------
+def phaseThree_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('LAST QUARTER', app.width/2, 75, fill='white', bold=True, size=30)
+    drawCircle(app.width/2, app.height/2, 100, fill=None, border='white', borderWidth=5)
+    drawArc(app.width/2, app.height/2, 200, 200, 90, 180, fill='white')
+#------------
+def phaseFour_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawLabel('NEW MOON', app.width/2, 75, fill='white', bold=True, size=30)
+    drawCircle(app.width/2, app.height/2, 100, fill=None, border='white')
 def main():
-    runApp(width = 640, height = 480)
+    runAppWithScreens(width=640, height=480, initialScreen='phaseSelection')
 
 main()
-
-'''
-notes:
-- add obstacle collisions
-- don't let character or enemies move thru walls
-- don't let arrows go through walls
-- except for boss
-'''
