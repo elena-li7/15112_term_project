@@ -203,6 +203,16 @@ def distance(x0, y0, x1, y1):
     return ( (x0-x1)**2 + (y0-y1)**2 ) **0.5
 
 def onAppStart(app):
+    verticalWall = (0, 0, 20, 50)
+    horizontalWall = (0, 0, 50, 20)
+    squareWall = (0, 0, 30, 30)
+    app.potentialObstacles = [verticalWall, horizontalWall, squareWall]
+    app.numObstacles = 5
+    app.obstacles = []
+    for i in range(app.numObstacles):
+        newObstacle = generateObstacle(app)
+        app.obstacles.append(newObstacle)
+
     # initialize game states
     app.gameOver = False
     app.win = False
@@ -324,6 +334,9 @@ def onMousePress(app, mx, my):
 
 def redrawAll(app):
     drawRect(0, 0, app.width, app.height, fill='gray')
+    for obstacle in app.obstacles:
+        x, y, width, height = obstacle
+        drawRect(x, y, width, height, fill='darkslategray')
     if app.win:
         drawLabel('YOU WON!', app.width/2, app.height/2)
     elif app.gameOver:
@@ -370,7 +383,22 @@ def addOxygen(app):
     newY = random.randint(50, app.height - 50)
     app.oxygen.append((newX, newY))
 
+def generateObstacle(app):
+    index = random.randint(0, 2)
+    obstacle = app.potentialObstacles[index]
+    startX, startY, width, height = obstacle
+    x, y = random.randint(0, 590), random.randint(0, 430)
+    return (startX+x, startY+y, width, height)
+
 def main():
     runApp(width = 640, height = 480)
 
 main()
+
+'''
+notes:
+- add obstacle collisions
+- don't let character or enemies move thru walls
+- don't let arrows go through walls
+- except for boss
+'''
