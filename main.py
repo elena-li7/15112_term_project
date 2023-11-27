@@ -209,15 +209,16 @@ def distance(x0, y0, x1, y1):
     return ( (x0-x1)**2 + (y0-y1)**2 ) **0.5
 
 def onAppStart(app):
-    verticalWall = (0, 0, 20, 50)
-    horizontalWall = (0, 0, 50, 20)
-    squareWall = (0, 0, 30, 30)
-    app.potentialObstacles = [verticalWall, horizontalWall, squareWall]
-    app.numObstacles = 5
-    app.obstacles = []
-    for i in range(app.numObstacles):
-        newObstacle = generateObstacle(app)
-        app.obstacles.append(newObstacle)
+    app.phase = None
+    app.enemyNumber = 0
+    app.numObstacles = 0
+    app.isBoss = False
+    app.boss = EnemyBoss(app.width/2, app.height/2)
+
+    app.verticalWall = (0, 0, 20, 50)
+    app.horizontalWall = (0, 0, 50, 20)
+    app.squareWall = (0, 0, 30, 30)
+    app.potentialObstacles = [app.verticalWall, app.horizontalWall, app.squareWall]
 
     # initialize game states
     app.gameOver = False
@@ -228,15 +229,11 @@ def onAppStart(app):
     app.oxygen = []
     app.enemies = []
     app.arrows = []
+    app.obstacles = []
 
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
     app.mc = Character(25, 25)
-    app.enemyNumber = 2
-    for i in range(app.enemyNumber):
-        initializeNewEnemy(app)
-    app.isBoss = True
-    app.boss = EnemyBoss(app.width/2, app.height/2)
 
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
@@ -500,12 +497,40 @@ def phaseSelection_redrawAll(app):
 def phaseSelection_onMousePress(app, mx, my):
     if 100 <= my <= app.height-100:
         if app.width/5 - 45 <= mx <= app.width/5 + 45:
+            app.phase = 1
+            app.enemyNumber = 3
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
             setActiveScreen('phaseOne')
         elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45:
+            app.phase = 2
+            app.enemyNumber = 5
+            app.numObstacles = 5
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
             setActiveScreen('phaseTwo')
         elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45:
+            app.phase = 3
             setActiveScreen('phaseThree')
         elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45:
+            app.phase = 4
+            app.enemyNumber = 5
+            app.numObstacles = 7
+            app.isBoss = True
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
             setActiveScreen('phaseFour')
 #------------
 def phaseOne_redrawAll(app):
@@ -513,23 +538,52 @@ def phaseOne_redrawAll(app):
     drawLabel('FIRST QUARTER', app.width/2, 75, fill='white', bold=True, size=30)
     drawCircle(app.width/2, app.height/2, 100, fill='white')
     drawArc(app.width/2, app.height/2, 190, 190, 90, 180, fill='black')
+    drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+
+def phaseOne_onMousePress(app, mx, my):
+    if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
+        app.phase = 1
+        setActiveScreen('combat')
 #------------
 def phaseTwo_redrawAll(app):
     drawRect(0, 0, 640, 480)
     drawLabel('FULL MOON', app.width/2, 75, fill='white', bold=True, size=30)
     drawCircle(app.width/2, app.height/2, 100, fill='white')
+    drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+
+def phaseTwo_onMousePress(app, mx, my):
+    if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
+        app.phase = 2
+        setActiveScreen('combat')
 #------------
 def phaseThree_redrawAll(app):
     drawRect(0, 0, 640, 480)
     drawLabel('LAST QUARTER', app.width/2, 75, fill='white', bold=True, size=30)
     drawCircle(app.width/2, app.height/2, 100, fill=None, border='white', borderWidth=5)
     drawArc(app.width/2, app.height/2, 200, 200, 90, 180, fill='white')
+    drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+
+def phaseThree_onMousePress(app, mx, my):
+    if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
+        app.phase = 3
+        setActiveScreen('combat')
 #------------
 def phaseFour_redrawAll(app):
     drawRect(0, 0, 640, 480)
     drawLabel('NEW MOON', app.width/2, 75, fill='white', bold=True, size=30)
     drawCircle(app.width/2, app.height/2, 100, fill=None, border='white')
+    drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+
+def phaseFour_onMousePress(app, mx, my):
+    if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
+        app.phase = 4
+        setActiveScreen('combat')
+
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='phaseSelection')
+    runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
 
 main()
