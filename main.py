@@ -1,6 +1,8 @@
 from cmu_graphics import *
 import random
 import math
+from PIL import Image, ImageDraw
+import os, pathlib
 
 class Character:
     def __init__(self, cx, cy):
@@ -209,6 +211,8 @@ def distance(x0, y0, x1, y1):
     return ( (x0-x1)**2 + (y0-y1)**2 ) **0.5
 
 def onAppStart(app):
+    app.tutorialImage = Image.open(os.path.join(pathlib.Path(__file__).parent,'tutorial.png'))
+    app.tutorialDraw = ImageDraw.Draw(app.tutorialImage)
     app.phase = None
     app.enemyNumber = 0
     app.numObstacles = 0
@@ -462,10 +466,7 @@ def titleScreen_onMousePress(app, mx, my):
         setActiveScreen('tutorial')
 #--------------
 def tutorial_redrawAll(app):
-    drawRect(0, 0, 640, 480)
-    drawRect(50, 50, app.width-100, app.height-100, fill=None, border='moccasin', borderWidth=5)
-    drawRect(app.width/2 - 75, 25, 150, 50)
-    drawLabel('TUTORIAL', app.width/2, 50, fill=rgb(176, 120, 30), size=25, bold=True)
+    drawImage(CMUImage(app.tutorialImage), 0, 0)
     drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
     drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
 
@@ -508,7 +509,7 @@ def phaseSelection_onMousePress(app, mx, my):
             setActiveScreen('phaseOne')
         elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45:
             app.phase = 2
-            app.enemyNumber = 5
+            app.enemyNumber = 3
             app.numObstacles = 5
             for i in range(app.enemyNumber):
                 initializeNewEnemy(app)
@@ -522,7 +523,7 @@ def phaseSelection_onMousePress(app, mx, my):
             setActiveScreen('phaseThree')
         elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45:
             app.phase = 4
-            app.enemyNumber = 5
+            app.enemyNumber = 3
             app.numObstacles = 7
             app.isBoss = True
             for i in range(app.enemyNumber):
@@ -584,6 +585,6 @@ def phaseFour_onMousePress(app, mx, my):
         setActiveScreen('combat')
 
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
+    runAppWithScreens(width=640, height=480, initialScreen='tutorial')
 
 main()
