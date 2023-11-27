@@ -213,6 +213,8 @@ def distance(x0, y0, x1, y1):
 def onAppStart(app):
     app.tutorialImage = Image.open(os.path.join(pathlib.Path(__file__).parent,'tutorial.png'))
     app.tutorialDraw = ImageDraw.Draw(app.tutorialImage)
+    app.titleImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 'titlescreen.png'))
+    app.titleDraw = ImageDraw.Draw(app.titleImage)
     app.phase = None
     app.enemyNumber = 0
     app.numObstacles = 0
@@ -451,24 +453,25 @@ def pause_onMousePress(app, mx, my):
         setActiveScreen('titleScreen')
 #--------------
 def titleScreen_redrawAll(app):
-    drawRect(0, 0, 640, 480)
-    drawLabel('MOONLIGHT ARCHER', app.width/2, 100, fill=rgb(176, 120, 30), size=25, bold=True)
-    drawLabel('super cool logo', 450, app.height/2, fill='gold')
-    drawRect(100, app.height/2 - 50, 150, 50, fill='papayaWhip', border='gold', borderWidth=5)
-    drawRect(100, app.height/2 + 50, 150, 50, fill='papayaWhip', border='gold', borderWidth=5)
-    drawLabel('START', 175, app.height/2 - 25, fill=rgb(176, 120, 30), size=20)
-    drawLabel('TUTORIAL', 175, app.height/2 + 75, fill=rgb(176, 120, 30), size=20)
+    drawImage(CMUImage(app.titleImage), 0, 0)
+    # drawPolygon(115, app.height/2 - 40, 290, app.height/2-40, 220, app.height/2+40, 45, app.height/2+40, fill='red')
+    # drawPolygon(115, app.height/2 + 62, 290, app.height/2 + 62, 220, app.height/2+142, 45, app.height/2+142, fill='red')
+    # drawRect(115, app.height/2 - 40, 100, 80, fill='red')
+    # drawRect(115, app.height/2 + 62, 100, 80, fill='red')
 
 def titleScreen_onMousePress(app, mx, my):
-    if 100 <= mx <= 250 and app.height/2 - 50 <= my <= app.height/2:
+    if 115 <= mx <= 215 and app.height/2 - 40 <= my <= app.height/2+40:
         setActiveScreen('phaseSelection')
-    if 100 <= mx <= 250 and app.height/2 + 50 <= my <= app.height/2 + 100:
+    if 115 <= mx <= 215 and app.height/2 + 62 <= my <= app.height/2 + 142:
         setActiveScreen('tutorial')
 #--------------
 def tutorial_redrawAll(app):
     drawImage(CMUImage(app.tutorialImage), 0, 0)
     drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
     drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
+    drawLabel('1. Use WASD or arrow keys to move.', 150, 150, fill='moccasin', size=15, align='left')
+    drawLabel('2. Replenish oxygen by collecting oxygen particles.', 150, 200, fill='moccasin', size=15, align='left')
+    drawLabel('3. Defeat enemies by shooting arrows (mouse press)', 150, 250, fill='moccasin', size=15, align='left')
 
 def tutorial_onMousePress(app, mx, my):
     if 80 <= mx <= 130 and 350 <= my <= 400:
