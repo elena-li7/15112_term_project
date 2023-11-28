@@ -62,7 +62,8 @@ class Arrow:
         unitvecX, unitvecY = vecX/mag, vecY/mag
         unitvecX *= 25
         unitvecY *= 25
-        drawLine(self.startX, self.startY, self.startX+unitvecX, self.startY+unitvecY)
+        drawLine(self.startX, self.startY, 
+                self.startX+unitvecX, self.startY+unitvecY)
     def move(self):
         self.startX += self.dx 
         self.startY += self.dy  
@@ -186,7 +187,7 @@ class EnemyBoss:
             if hitChance == 0:
                 # 25% chance of hitting
                 opacity = 100
-                drawCircle(targetX, targetY, 30, fill='purple', opacity = opacity)
+                drawCircle(targetX, targetY, 30, fill='purple', opacity=opacity)
                 app.mc.health -= self.attackPower * 2
         elif state == 'warning':
             opacity = 20
@@ -204,17 +205,22 @@ def rectanglesOverlap(left1, top1, width1, height1,
     bottom2 = top2 + height2
     right1 = left1 + width1
     right2 = left2 + width2
-    return (bottom1 >= top2 and bottom2 >= top1 and right1 >= left2 and right2 >= left1)
+    return (bottom1>=top2 and bottom2>=top1 and right1>=left2 and right2>=left1)
 ###############################################################################
 
 def distance(x0, y0, x1, y1):
     return ( (x0-x1)**2 + (y0-y1)**2 ) **0.5
 
 def onAppStart(app):
-    app.tutorialImage = Image.open(os.path.join(pathlib.Path(__file__).parent,'tutorial.png'))
+    app.tutorialImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                                'tutorial.png'))
     app.tutorialDraw = ImageDraw.Draw(app.tutorialImage)
-    app.titleImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 'titlescreen.png'))
+    app.titleImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 
+                                             'titlescreen.png'))
     app.titleDraw = ImageDraw.Draw(app.titleImage)
+    app.settingsImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 
+                                             'settings.png'))
+    app.settingsDraw = ImageDraw.Draw(app.settingsImage)
     app.phase = None
     app.enemyNumber = 0
     app.numObstacles = 0
@@ -224,7 +230,7 @@ def onAppStart(app):
     app.verticalWall = (0, 0, 20, 50)
     app.horizontalWall = (0, 0, 50, 20)
     app.squareWall = (0, 0, 30, 30)
-    app.potentialObstacles = [app.verticalWall, app.horizontalWall, app.squareWall]
+    app.potentialObstacles=[app.verticalWall,app.horizontalWall,app.squareWall]
 
     # initialize game states
     app.gameOver = False
@@ -236,6 +242,8 @@ def onAppStart(app):
     app.enemies = []
     app.arrows = []
     app.obstacles = []
+
+    app.characterSpeed = 5
 
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
@@ -286,7 +294,8 @@ def combat_onStep(app):
             left1, top1, width1, height1 = enemy.hitbox
             left2, top2, width2, height2 = arrow.hitbox
             # check if mc hits an enemy
-            if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
+            if (rectanglesOverlap(left1, top1, width1, height1, 
+                                  left2, top2, width2, height2)
                 and arrow.entity =='character'):
                 enemy.health -= app.mc.attackPower
                 # check if enemy dies
@@ -296,7 +305,8 @@ def combat_onStep(app):
                 app.arrows.remove(arrow)
             left1, top1, width1, height1 = app.mc.hitbox
             # check if mc is hit
-            if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
+            if (rectanglesOverlap(left1, top1, width1, height1, 
+                                  left2, top2, width2, height2)
                 and arrow.entity =='enemy'):
                 app.mc.health -= 5
                 if app.mc.health <= 0:
@@ -312,7 +322,8 @@ def combat_onStep(app):
             if app.isBoss:
                 left1, top1, width1, height1 = arrow.hitbox
                 left2, top2, width2, height2 = app.boss.hitbox
-                if (rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2)
+                if (rectanglesOverlap(left1, top1, width1, height1, 
+                                      left2, top2, width2, height2)
                 and arrow.entity =='character'):
                     app.arrows.remove(arrow)
                     app.boss.health -= app.mc.attackPower / 2
@@ -333,7 +344,8 @@ def combat_onStep(app):
         x, y = oxygen
         left1, top1, width1, height1 = app.mc.hitbox
         left2, top2, width2, height2 = x - 10, y - 10, 20, 20
-        if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+        if rectanglesOverlap(left1, top1, width1, height1, 
+                             left2, top2, width2, height2):
             app.oxygen.remove(oxygen)
             app.mc.gainOxygen()
 
@@ -345,27 +357,28 @@ def combat_onKeyHold(app, keys):
     if app.gameOver or app.win: return
     # mc movement
     if 'up' in keys or 'w' in keys:
-        app.mc.move(0, -5)
+        app.mc.move(0, -1 * app.characterSpeed)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(0, 5)
+            app.mc.move(0, app.characterSoeed)
     if 'down' in keys or 's' in keys: 
-        app.mc.move(0, 5)
+        app.mc.move(0, app.characterSpeed)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(0, -5)
+            app.mc.move(0, -1 * app.characterSpeed)
     if 'right' in keys or 'd' in keys:
-        app.mc.move(5, 0)
+        app.mc.move(app.characterSpeed, 0)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(-5, 0)
+            app.mc.move(-1 * app.characterSpeed, 0)
     if 'left' in keys or 'a' in keys:
-        app.mc.move(-5, 0)
+        app.mc.move(-1 * app.characterSpeed, 0)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(5, 0)
+            app.mc.move(app.characterSpeed, 0)
 
 def canMove(app, entity):
     left1, top1, width1, height1 = entity
     for obstacle in app.obstacles:
         left2, top2, width2, height2 = obstacle
-        if rectanglesOverlap(left1, top1, width1, height1, left2, top2, width2, height2):
+        if rectanglesOverlap(left1, top1, width1, height1, 
+                             left2, top2, width2, height2):
             return False
     return True
     
@@ -440,7 +453,8 @@ def pause_onKeyPress(app, key):
 
 def pause_redrawAll(app):
     drawRect(0, 0, app.width, app.height)
-    drawLabel('PAUSED.', app.width/2, 100, fill=rgb(176, 120, 30), bold=True, size=30)
+    drawLabel('PAUSED.', app.width/2, 100, fill=rgb(176, 120, 30), 
+              bold=True, size=30)
     drawRect(app.width/2 - 100, 200, 200, 50, fill='moccasin')
     drawRect(app.width/2 - 100, 275, 200, 50, fill='moccasin')
     drawLabel('resume', app.width/2, 225, fill=rgb(176, 120, 30), size=20)
@@ -454,24 +468,51 @@ def pause_onMousePress(app, mx, my):
 #--------------
 def titleScreen_redrawAll(app):
     drawImage(CMUImage(app.titleImage), 0, 0)
-    # drawPolygon(115, app.height/2 - 40, 290, app.height/2-40, 220, app.height/2+40, 45, app.height/2+40, fill='red')
-    # drawPolygon(115, app.height/2 + 62, 290, app.height/2 + 62, 220, app.height/2+142, 45, app.height/2+142, fill='red')
-    # drawRect(115, app.height/2 - 40, 100, 80, fill='red')
-    # drawRect(115, app.height/2 + 62, 100, 80, fill='red')
+    drawRect(app.width - 100, app.height - 100, 75, 75, borderWidth=5, border=rgb(176, 120, 30))
+    drawStar(app.width - 62.5, app.height-62.5, 25, 4, fill=rgb(176, 120, 30))
 
 def titleScreen_onMousePress(app, mx, my):
     if 115 <= mx <= 215 and app.height/2 - 40 <= my <= app.height/2+40:
         setActiveScreen('phaseSelection')
     if 115 <= mx <= 215 and app.height/2 + 62 <= my <= app.height/2 + 142:
         setActiveScreen('tutorial')
+    if app.width-100 <= mx <= app.width-25 and app.height-100 <= my <= app.height-25:
+        setActiveScreen('settings')
+#--------------
+def settings_redrawAll(app):
+    drawImage(CMUImage(app.settingsImage), 0, 0)
+    drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
+    drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
+    drawLine(app.width/2 - 100, app.height/2, app.width/2+100, app.height/2, fill='saddleBrown', lineWidth=5)
+    drawCircle(app.width/2-100 +20*app.characterSpeed, app.height/2, 7, fill=rgb(176, 120, 30))
+    drawRect(app.width/2-150, app.height/2 - 12.5, 25, 25, fill='saddleBrown')
+    drawRect(app.width/2+125, app.height/2 - 12.5, 25, 25, fill='saddleBrown')
+    drawLabel(f'CHARACTER SPEED: {app.characterSpeed}', app.width/2, app.height/2 - 30, fill=rgb(176, 120, 30), size=17, bold=True)
+    drawLabel('_', app.width/2-137.5, app.height/2-2.5, fill='white', size=20, bold=True)
+    drawLabel('+', app.width/2+137.5, app.height/2, fill='white', size=20, bold=True)
+
+def settings_onMousePress(app, mx, my):
+    if 80 <= mx <= 130 and 350 <= my <= 400:
+        setActiveScreen('titleScreen')
+    if app.width/2-150 <= mx <= app.width/2-125 and app.height/2-12.5 <= my <= app.height/2+12.5:
+        app.characterSpeed -= 1
+        if app.characterSpeed < 1:
+            app.characterSpeed = 1
+    if app.width/2+125 <= mx <= app.width/2+150 and app.height/2-12.5 <= my <= app.height/2+12.5:
+        app.characterSpeed += 1
+        if app.characterSpeed > 10:
+            app.characterSpeed = 10
 #--------------
 def tutorial_redrawAll(app):
     drawImage(CMUImage(app.tutorialImage), 0, 0)
     drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
     drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
-    drawLabel('1. Use WASD or arrow keys to move.', 150, 150, fill='moccasin', size=15, align='left')
-    drawLabel('2. Replenish oxygen by collecting oxygen particles.', 150, 200, fill='moccasin', size=15, align='left')
-    drawLabel('3. Defeat enemies by shooting arrows (mouse press)', 150, 250, fill='moccasin', size=15, align='left')
+    drawLabel('1. Use WASD or arrow keys to move.', 150, 150, fill='moccasin', 
+              size=15, align='left')
+    drawLabel('2. Replenish oxygen by collecting oxygen particles.', 150, 200, 
+              fill='moccasin', size=15, align='left')
+    drawLabel('3. Defeat enemies by shooting arrows (mouse press)', 150, 250, 
+              fill='moccasin', size=15, align='left')
 
 def tutorial_onMousePress(app, mx, my):
     if 80 <= mx <= 130 and 350 <= my <= 400:
@@ -543,10 +584,12 @@ def phaseOne_redrawAll(app):
     drawCircle(app.width/2, app.height/2, 100, fill='white')
     drawArc(app.width/2, app.height/2, 190, 190, 90, 180, fill='black')
     drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
-    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+    drawLabel('BEGIN', app.width/2, app.height - 75, 
+              fill=rgb(176, 120, 30), size=20)
 
 def phaseOne_onMousePress(app, mx, my):
-    if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
+    if app.width/2-50 <= mx <= app.width/2+50 and \
+    app.height-100 <= my <= app.height-50:
         app.phase = 1
         setActiveScreen('combat')
 #------------
@@ -583,11 +626,16 @@ def phaseFour_redrawAll(app):
     drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
 
 def phaseFour_onMousePress(app, mx, my):
-    if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
+    if app.width/2-50 <= mx <= app.width/2+50 and \
+    app.height-100 <= my <= app.height-50:
         app.phase = 4
         setActiveScreen('combat')
+#---------
+def candle_redrawAll(app):
+    drawRect(0, 0, 640, 480)
+    drawOval(app.width/2, app.height-75, app.width+100, 300, fill='white')
 
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='tutorial')
+    runAppWithScreens(width=640, height=480, initialScreen='settings')
 
 main()
