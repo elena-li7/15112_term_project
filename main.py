@@ -45,11 +45,13 @@ class Character:
         if self.cx >= 640: self.cx = 635
         if self.cy <= 0: self.cy = 5
         if self.cy >= 480: self.cy = 475
-    def drawHealthOxygen(self):
+    def drawHealthOxygen(self, app):
         drawRect(490, 0, 150, 100, fill='darkgray')
-        drawLabel(f'♥   {self.health}', 550, 25, font='symbols', 
+        drawImage(CMUImage(app.heartImage), 510, 15)
+        drawLabel(f'   {self.health}', 550, 25, font='symbols', 
             size=30, fill='darkred')
-        drawLabel(f'○   {self.oxygen}', 550, 65, font='symbols', 
+        drawImage(CMUImage(app.bubbleImage), 510, 55)
+        drawLabel(f'   {self.oxygen}', 550, 65, font='symbols', 
             size=30, fill='blue')
     def loseOxygen(self, app):
         self.oxygen -= 5
@@ -119,29 +121,40 @@ class EnemyPhysical:
         targetY = app.mc.cy
         if targetX - self.cx > 0:
             self.cx += self.speed
+            if self.cx > app.width - 25:
+                self.cx = app.width - 25
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
-            if not canMove(app, self.hitbox):
+            while not canMove(app, self.hitbox):
                 self.cx -= self.speed
+                self.cy += 50
                 self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cx -= self.speed
+            if self.cx < 25:
+                self.cx = 25
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
-            if not canMove(app, self.hitbox):
+            while not canMove(app, self.hitbox):
                 self.cx += self.speed
+                self.cy -= 50
                 self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         if targetY - self.cy > 0:
             self.cy += self.speed
+            if self.cy > app.height - 30:
+                self.cy = app.height - 30
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
-            if not canMove(app, self.hitbox):
+            while not canMove(app, self.hitbox):
                 self.cy -= self.speed
+                self.cx -= 50
                 self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cy -= self.speed
+            if self.cy < 30:
+                self.cy = 30
             self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
-            if not canMove(app, self.hitbox):
+            while not canMove(app, self.hitbox):
                 self.cy += self.speed
+                self.cx += 50
                 self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
-
 class EnemyRanged:
     def __init__(self, cx, cy, app):
         self.cx = cx
@@ -169,7 +182,7 @@ class EnemyRanged:
         app.arrows.append(newArrow)
 
 class EnemyBoss:
-    def __init__(self, cx, cy):
+    def __init__(self, cx, cy, app):
         self.cx = cx
         self.cy = cy
         self.type = 'boss'
@@ -178,15 +191,21 @@ class EnemyBoss:
         self.powerups = set()
         self.speed = 5
         self.arrows = []
-        self.hitbox = (self.cx-20, self.cy-20, 40, 40)
+        self.width, self.height = getImageSize(CMUImage(app.bossImage))
+        self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, self.width, self.height)
         self.attackPower = 5
-    def draw(self):
-        drawCircle(self.cx, self.cy, 10, fill=self.color)
-        drawCircle(self.cx, self.cy, 150, fill=None, border='black')
+    def draw(self, app):
+        drawImage(CMUImage(app.bossImage), self.cx-self.width/2, self.cy-self.height/2)        
+        drawCircle(self.cx, self.cy, 150, fill=None, border='gray', borderWidth=5)
     def drawHealth(self):
+        healthColor = 'limegreen'
+        if 25 <= self.health <= 75:
+            healthColor = 'gold'
+        if self.health <25:
+            healthColor = 'darkred'
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
         drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
-             fill='limegreen')
+             fill=healthColor)
     def laserAttack(self, app, state):
         hitChance = random.randint(0, 1)
         distX = app.mc.cx - self.cx
@@ -269,12 +288,16 @@ def onAppStart(app):
                                                'bubble.png'))
     app.combatImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                'combat.png'))
+    app.bossImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'boss.png'))
+    app.heartImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'heart.png'))
 
     app.phase = None
     app.enemyNumber = 0
     app.numObstacles = 0
     app.isBoss = False
-    app.boss = EnemyBoss(app.width/2, app.height/2)
+    app.boss = EnemyBoss(app.width/2, app.height/2, app)
 
     app.verticalWall = (0, 0, 20, 50)
     app.horizontalWall = (0, 0, 50, 20)
@@ -296,7 +319,7 @@ def onAppStart(app):
 
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
-    app.mc = Character(25, 25, app)
+    app.mc = Character(25, app.height-50, app)
 
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
@@ -438,7 +461,6 @@ def combat_onMousePress(app, mx, my):
 
 def combat_redrawAll(app):
     drawImage(CMUImage(app.combatImage), 0, 0)
-    # drawRect(0, 0, app.width, app.height, fill='gray')
     if not app.gameOver and not app.win:
         for obstacle in app.obstacles:
             x, y, width, height = obstacle
@@ -463,7 +485,7 @@ def combat_redrawAll(app):
                     app.boss.laserAttack(app, 'warning')
                 elif app.counter == 10:
                     app.boss.laserAttack(app, 'attack')
-            app.boss.draw()
+            app.boss.draw(app)
             app.boss.drawHealth()
         elif app.bossKilled:
             # boss explodes and deals a large amount of dmg              
@@ -483,7 +505,7 @@ def combat_redrawAll(app):
             width, height = getImageSize(CMUImage(app.bubbleImage))
             drawImage(CMUImage(app.bubbleImage), oxygenX-width/2, oxygenY-height/2)
         app.mc.draw(app)
-        app.mc.drawHealthOxygen()
+        app.mc.drawHealthOxygen(app)
 
 def addOxygen(app):
     newX = random.randint(50, app.width - 200)
