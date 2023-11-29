@@ -105,7 +105,10 @@ class EnemyPhysical:
         self.width, self.height = getImageSize(CMUImage(app.greenGhostForward))
         self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, self.width, self.height)
     def draw(self, app):
-        drawImage(CMUImage(app.greenGhostForward), self.cx - self.width/2, self.cy-self.height/2)
+        if app.stage == 'combat':
+            drawImage(CMUImage(app.greenGhostForward), self.cx - self.width/2, self.cy-self.height/2)
+        elif app.stage == 'red':
+            drawImage(CMUImage(app.darkRedGhostForward), self.cx - self.width/2, self.cy-self.height/2)
     def drawHealth(self):
         healthColor = 'limegreen'
         if 25 <= self.health <= 75:
@@ -166,7 +169,10 @@ class EnemyRanged:
         self.width, self.height = getImageSize(CMUImage(app.ghostForward))
         self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, self.width, self.height)
     def draw(self, app):
-        drawImage(CMUImage(app.ghostForward), self.cx - self.width/2, self.cy-self.height/2)
+        if app.stage == 'combat':
+            drawImage(CMUImage(app.ghostForward), self.cx - self.width/2, self.cy-self.height/2)
+        elif app.stage == 'red':
+            drawImage(CMUImage(app.redGhostForward), self.cx - self.width/2, self.cy-self.height/2)
     def drawHealth(self):
         healthColor = 'limegreen'
         if 25 <= self.health <= 75:
@@ -297,7 +303,13 @@ def onAppStart(app):
                                                'phaseTwoWin.png'))
     app.phaseThreeWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                'phaseThreeWin.png'))
-
+    app.redGhostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'redGhostForward.png'))
+    app.darkRedGhostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'darkRedGhostForward.png'))
+    app.combatRed = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'combatRed.png'))
+    app.stage = 'combat'
     app.phase = 1
     app.enemyNumber = 0
     app.numObstacles = 0
@@ -460,16 +472,26 @@ def canMove(app, entity):
     return True
     
 def combat_onMousePress(app, mx, my):
+    if 10 <= mx <= 50 and 10 <= my <= 50:
+        setActiveScreen('pause')
     if app.gameOver or app.win: return
     newArrow = Arrow(app.mc.cx, app.mc.cy, mx, my, 'character')
     app.arrows.append(newArrow)
 
 def combat_redrawAll(app):
-    drawImage(CMUImage(app.combatImage), 0, 0)
+    if app.stage == 'combat':
+        drawImage(CMUImage(app.combatImage), 0, 0)
+    elif app.stage == 'red':
+        drawImage(CMUImage(app.combatRed), 0, 0)
     if not app.gameOver and not app.win:
         for obstacle in app.obstacles:
             x, y, width, height = obstacle
-            drawRect(x, y, width, height, fill='darkslategray')
+            color = None
+            if app.stage == 'combat':
+                color = 'darkslategray'
+            elif app.stage == 'red':
+                color = 'sienna'
+            drawRect(x, y, width, height, fill=color)
     if app.win:
         setActiveScreen('win')
     elif app.gameOver:
@@ -612,23 +634,31 @@ def win_redrawAll(app):
         drawImage(CMUImage(app.phaseThreeWin), 0, 0)
     # if app.phase == 4:
     #     drawImage(CMUImage(app.phaseOneWin), 0, 0)
-    drawLabel('->', app.width/2, app.height/2, size = 20, fill=rgb(176, 120, 30))
-    drawLabel('NEXT PHASE', app.width/2, app.height/2 + 30, fill=rgb(176, 120, 30), size=25)
+
+    # drawLabel('NEXT PHASE', app.width/2, app.height/2 + 30, fill=rgb(176, 120, 30), size=25)
+    # drawRect(app.width/2 - 40, app.height/2 - 40, 80, 80, fill='white')
+
+def win_onMousePress(app, mx, my):
+    if app.width/2 - 40 <= mx <= app.width/2 + 40 and app.height/2 - 40 <= my <= app.height/2 + 40:
+        app.phase += 1
+        app.win = False
+        app.mc.health = app.mc.oxygen = 100
+        setActiveScreen('phaseSelection')
 #--------------
 def phaseSelection_redrawAll(app):
     color1 = color2 = color3 = color4 = None
     if app.phase == 1:
         color1 = rgb(176, 120, 30)
-        color2 = color3 = color4 = 'gray'
+        color2 = color3 = color4 = 'burlyWood'
     elif app.phase == 2:
         color2 = rgb(176, 120, 30)
-        color1 = color3 = color4 = 'gray'
+        color1 = color3 = color4 = 'burlyWood'
     elif app.phase == 3:
         color3 = rgb(176, 120, 30)
-        color1 = color2 = color4 = 'gray'
+        color1 = color2 = color4 = 'burlyWood'
     elif app.phase == 4:
         color4 = rgb(176, 120, 30)
-        color1 = color2 = color3 = 'gray'
+        color1 = color2 = color3 = 'burlyWood'
     drawRect(0, 0, 640, 480)
     drawLabel('PHASE SELECTION', app.width/2, 50, fill=color1, size=30)
     drawRect(app.width/5 - 45, 100, 90, app.height-200, fill=color1)
@@ -662,8 +692,18 @@ def phaseSelection_onMousePress(app, mx, my):
                 app.obstacles.append(newObstacle)
             setActiveScreen('phaseTwo')
         elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45 and app.phase == 3:
+            app.stage = 'red'
+            app.enemyNumber = 3
+            app.numObstacles = 5
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
             setActiveScreen('phaseThree')
         elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45 and app.phase == 4:
+            app.stage = 'combat'
             app.enemyNumber = 3
             app.numObstacles = 7
             app.isBoss = True
@@ -733,6 +773,14 @@ def candle_redrawAll(app):
     drawOval(app.width/2, app.height-75, app.width+100, 300, fill='white')
 
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='win')
+    runAppWithScreens(width=640, height=480, initialScreen='combat')
 
 main()
+
+'''
+notes:
+add a nicer pause screen
+add in chance for blood moon or eclipse phase
+make sure to buff enemies for these ^^
+lighting the candle!!
+'''
