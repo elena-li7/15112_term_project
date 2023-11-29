@@ -14,11 +14,27 @@ class Character:
         self.arrows = []
         self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
         self.attackPower = 10
-    def draw(self):
-        drawCircle(self.cx, self.cy, 10)
+        self.direction = 'forward'
+    def draw(self, app):
+        if self.direction == 'forward':
+            drawImage(CMUImage(app.spriteForward), self.cx-17, self.cy-25)
+        if self.direction == 'backward':
+            drawImage(CMUImage(app.spriteBackward), self.cx-17, self.cy-25)
+        if self.direction == 'right':
+            drawImage(CMUImage(app.spriteRight), self.cx-17, self.cy-25)
+        if self.direction == 'left':
+            drawImage(CMUImage(app.spriteLeft), self.cx-17, self.cy-25)
     def move(self, dx, dy):
         self.cx += dx
         self.cy += dy
+        if dx > 0:
+            self.direction = 'right'
+        if dx < 0:
+            self.direction = 'left'
+        if dy > 0:
+            self.direction = 'forward'
+        if dy < 0:
+            self.direction = 'backward'
         self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
         if self.cx <= 0: self.cx = 5
         if self.cx >= 640: self.cx = 635
@@ -56,14 +72,16 @@ class Arrow:
         unitvecX *= 5
         unitvecY *= 5
         self.dx, self.dy = unitvecX, unitvecY
-    def draw(self):
-        vecX, vecY = self.x - self.startX, self.y-self.startY
-        mag = ((vecX)**2 + (vecY)**2)**0.5
-        unitvecX, unitvecY = vecX/mag, vecY/mag
-        unitvecX *= 25
-        unitvecY *= 25
-        drawLine(self.startX, self.startY, 
-                self.startX+unitvecX, self.startY+unitvecY)
+    def draw(self, app):
+        distX = self.x - self.startX
+        distY = self.y - self.startY
+        dist = distance(self.x, self.y, self.startX, self.startY)
+        angle = math.asin(distY / dist)
+        if distX > 0:
+            angle = math.degrees(angle) + 120
+        else:
+            angle = -1 * math.degrees(angle) - 60
+        drawImage(CMUImage(app.arrowImage), self.startX, self.startY, rotateAngle=angle)
     def move(self):
         self.startX += self.dx 
         self.startY += self.dy  
@@ -83,9 +101,14 @@ class EnemyPhysical:
     def draw(self):
         drawCircle(self.cx, self.cy, 10, fill=self.color)
     def drawHealth(self):
+        healthColor = 'limegreen'
+        if 25 <= self.health <= 75:
+            healthColor = 'gold'
+        if self.health < 25:
+            healthColor = 'darkred'
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
         drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
-             fill='limegreen')
+             fill=healthColor)
     def attack(self, app):
         targetX = app.mc.cx
         targetY = app.mc.cy
@@ -128,9 +151,14 @@ class EnemyRanged:
     def draw(self):
         drawCircle(self.cx, self.cy, 10, fill=self.color)
     def drawHealth(self):
+        healthColor = 'limegreen'
+        if 25 <= self.health <= 75:
+            healthColor = 'gold'
+        if self.health <25:
+            healthColor = 'darkred'
         drawRect(self.cx - 25, self.cy + 30, 50, 20, fill='dimgray')
         drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
-             fill='limegreen')
+             fill=healthColor)
     def attack(self, app):
         newArrow = Arrow(self.cx, self.cy, app.mc.cx, app.mc.cy, 'enemy')
         app.arrows.append(newArrow)
@@ -214,13 +242,21 @@ def distance(x0, y0, x1, y1):
 def onAppStart(app):
     app.tutorialImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                 'tutorial.png'))
-    app.tutorialDraw = ImageDraw.Draw(app.tutorialImage)
     app.titleImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 
                                              'titlescreen.png'))
-    app.titleDraw = ImageDraw.Draw(app.titleImage)
     app.settingsImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 
                                              'settings.png'))
-    app.settingsDraw = ImageDraw.Draw(app.settingsImage)
+    app.arrowImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                            'arrow.png'))
+    app.spriteForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                            'spriteForward.png'))
+    app.spriteBackward = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                            'spriteBackward.png'))
+    app.spriteRight = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                            'spriteRight.png'))
+    app.spriteLeft = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                            'spriteLeft.png'))
+
     app.phase = None
     app.enemyNumber = 0
     app.numObstacles = 0
@@ -359,7 +395,7 @@ def combat_onKeyHold(app, keys):
     if 'up' in keys or 'w' in keys:
         app.mc.move(0, -1 * app.characterSpeed)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(0, app.characterSoeed)
+            app.mc.move(0, app.characterSpeed)
     if 'down' in keys or 's' in keys: 
         app.mc.move(0, app.characterSpeed)
         if not canMove(app, app.mc.hitbox):
@@ -426,12 +462,12 @@ def combat_redrawAll(app):
             if app.counter == 10:
                 enemy.attack(app)
         for arrow in app.arrows:
-            arrow.draw()
+            arrow.draw(app)
         if app.counter == 10 and len(app.oxygen) <= 5:
             addOxygen(app)
         for oxygenX, oxygenY in app.oxygen:
             drawCircle(oxygenX, oxygenY, 10, fill='blue')
-        app.mc.draw()
+        app.mc.draw(app)
         app.mc.drawHealthOxygen()
 
 def addOxygen(app):
@@ -636,6 +672,6 @@ def candle_redrawAll(app):
     drawOval(app.width/2, app.height-75, app.width+100, 300, fill='white')
 
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='settings')
+    runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
 
 main()
