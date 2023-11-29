@@ -46,12 +46,11 @@ class Character:
         if self.cy <= 0: self.cy = 5
         if self.cy >= 480: self.cy = 475
     def drawHealthOxygen(self, app):
-        drawRect(490, 0, 150, 100, fill='darkgray')
-        drawImage(CMUImage(app.heartImage), 510, 15)
-        drawLabel(f'   {self.health}', 550, 25, font='symbols', 
+        drawImage(CMUImage(app.heartImage), 520, 15)
+        drawLabel(f'   {self.health}', 560, 25, font='symbols', 
             size=30, fill='darkred')
-        drawImage(CMUImage(app.bubbleImage), 510, 55)
-        drawLabel(f'   {self.oxygen}', 550, 65, font='symbols', 
+        drawImage(CMUImage(app.bubbleImage), 520, 55)
+        drawLabel(f'   {self.oxygen}', 560, 65, font='symbols', 
             size=30, fill='blue')
     def loseOxygen(self, app):
         self.oxygen -= 5
@@ -292,8 +291,14 @@ def onAppStart(app):
                                                'boss.png'))
     app.heartImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                'heart.png'))
+    app.phaseOneWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'phaseOneWin.png'))
+    app.phaseTwoWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'phaseTwoWin.png'))
+    app.phaseThreeWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'phaseThreeWin.png'))
 
-    app.phase = None
+    app.phase = 1
     app.enemyNumber = 0
     app.numObstacles = 0
     app.isBoss = False
@@ -546,6 +551,7 @@ def titleScreen_redrawAll(app):
 
 def titleScreen_onMousePress(app, mx, my):
     if 115 <= mx <= 215 and app.height/2 - 40 <= my <= app.height/2+40:
+        app.phase = 1
         setActiveScreen('phaseSelection')
     if 115 <= mx <= 215 and app.height/2 + 62 <= my <= app.height/2 + 142:
         setActiveScreen('tutorial')
@@ -598,15 +604,37 @@ def gameOver_redrawAll(app):
 #--------------
 def win_redrawAll(app):
     drawRect(0, 0, 640, 480)
-    drawLabel('you won!', app.width/2, app.height/2, fill=rgb(176, 120, 30), size=50)
+    if app.phase == 1:
+        drawImage(CMUImage(app.phaseOneWin), 0, 0)
+    if app.phase == 2:
+        drawImage(CMUImage(app.phaseTwoWin), 0, 0)
+    if app.phase == 3:
+        drawImage(CMUImage(app.phaseThreeWin), 0, 0)
+    # if app.phase == 4:
+    #     drawImage(CMUImage(app.phaseOneWin), 0, 0)
+    drawLabel('->', app.width/2, app.height/2, size = 20, fill=rgb(176, 120, 30))
+    drawLabel('NEXT PHASE', app.width/2, app.height/2 + 30, fill=rgb(176, 120, 30), size=25)
 #--------------
 def phaseSelection_redrawAll(app):
+    color1 = color2 = color3 = color4 = None
+    if app.phase == 1:
+        color1 = rgb(176, 120, 30)
+        color2 = color3 = color4 = 'gray'
+    elif app.phase == 2:
+        color2 = rgb(176, 120, 30)
+        color1 = color3 = color4 = 'gray'
+    elif app.phase == 3:
+        color3 = rgb(176, 120, 30)
+        color1 = color2 = color4 = 'gray'
+    elif app.phase == 4:
+        color4 = rgb(176, 120, 30)
+        color1 = color2 = color3 = 'gray'
     drawRect(0, 0, 640, 480)
-    drawLabel('PHASE SELECTION', app.width/2, 50, fill=rgb(176, 120, 30), size=30)
-    drawRect(app.width/5 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
-    drawRect(app.width/5*2 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
-    drawRect(app.width/5*3 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
-    drawRect(app.width/5*4 - 45, 100, 90, app.height-200, fill=rgb(176, 120, 30))
+    drawLabel('PHASE SELECTION', app.width/2, 50, fill=color1, size=30)
+    drawRect(app.width/5 - 45, 100, 90, app.height-200, fill=color1)
+    drawRect(app.width/5*2 - 45, 100, 90, app.height-200, fill=color2)
+    drawRect(app.width/5*3 - 45, 100, 90, app.height-200, fill=color3)
+    drawRect(app.width/5*4 - 45, 100, 90, app.height-200, fill=color4)
     drawLabel('I', app.width/5, 125, fill='moccasin', size=30, bold=True)
     drawLabel('II', app.width/5*2, 125, fill='moccasin', size=30, bold=True)
     drawLabel('III', app.width/5*3, 125, fill='moccasin', size=30, bold=True)
@@ -614,8 +642,7 @@ def phaseSelection_redrawAll(app):
 
 def phaseSelection_onMousePress(app, mx, my):
     if 100 <= my <= app.height-100:
-        if app.width/5 - 45 <= mx <= app.width/5 + 45:
-            app.phase = 1
+        if app.width/5 - 45 <= mx <= app.width/5 + 45 and app.phase == 1:
             app.enemyNumber = 3
             for i in range(app.enemyNumber):
                 initializeNewEnemy(app)
@@ -624,8 +651,7 @@ def phaseSelection_onMousePress(app, mx, my):
                 newObstacle = generateObstacle(app)
                 app.obstacles.append(newObstacle)
             setActiveScreen('phaseOne')
-        elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45:
-            app.phase = 2
+        elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45 and app.phase == 2:
             app.enemyNumber = 3
             app.numObstacles = 5
             for i in range(app.enemyNumber):
@@ -635,11 +661,9 @@ def phaseSelection_onMousePress(app, mx, my):
                 newObstacle = generateObstacle(app)
                 app.obstacles.append(newObstacle)
             setActiveScreen('phaseTwo')
-        elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45:
-            app.phase = 3
+        elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45 and app.phase == 3:
             setActiveScreen('phaseThree')
-        elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45:
-            app.phase = 4
+        elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45 and app.phase == 4:
             app.enemyNumber = 3
             app.numObstacles = 7
             app.isBoss = True
@@ -709,6 +733,6 @@ def candle_redrawAll(app):
     drawOval(app.width/2, app.height-75, app.width+100, 300, fill='white')
 
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
+    runAppWithScreens(width=640, height=480, initialScreen='win')
 
 main()
