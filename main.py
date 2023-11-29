@@ -5,25 +5,30 @@ from PIL import Image, ImageDraw
 import os, pathlib
 
 class Character:
-    def __init__(self, cx, cy):
+    def __init__(self, cx, cy, app):
+        self.sprite = app.spriteForward
         self.health = 100
         self.oxygen = 100
         self.powerups = set()
         self.cx = cx
         self.cy = cy
         self.arrows = []
-        self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
+        self.width, self.height = getImageSize(CMUImage(self.sprite))
+        self.hitbox = (self.cx - self.width/2, self.cy - self.height/2, self.width, self.height)
         self.attackPower = 10
         self.direction = 'forward'
     def draw(self, app):
         if self.direction == 'forward':
-            drawImage(CMUImage(app.spriteForward), self.cx-17, self.cy-25)
-        if self.direction == 'backward':
-            drawImage(CMUImage(app.spriteBackward), self.cx-17, self.cy-25)
-        if self.direction == 'right':
-            drawImage(CMUImage(app.spriteRight), self.cx-17, self.cy-25)
-        if self.direction == 'left':
-            drawImage(CMUImage(app.spriteLeft), self.cx-17, self.cy-25)
+            self.sprite = app.spriteForward
+        elif self.direction == 'backward':
+            self.sprite = app.spriteBackward
+        elif self.direction == 'right':
+            self.sprite = app.spriteRight
+        elif self.direction == 'left':
+            self.sprite = app.spriteLeft
+        drawImage(CMUImage(self.sprite), self.cx-self.width/2, self.cy-self.height/2)
+        self.width, self.height = getImageSize(CMUImage(self.sprite))
+        self.hitbox = (self.cx - self.width/2, self.cy - self.height/2, self.width, self.height)
     def move(self, dx, dy):
         self.cx += dx
         self.cy += dy
@@ -88,18 +93,18 @@ class Arrow:
         self.hitbox = (self.startX - 10, self.startY-10, 50, 25)
 
 class EnemyPhysical:
-    def __init__(self, cx, cy):
+    def __init__(self, cx, cy, app):
         self.cx = cx
         self.cy = cy
         self.type = 'physical'
-        self.color = 'pink'
         self.health = 100
         self.powerups = set()
         self.speed = 20
         self.arrows = []
-        self.hitbox = (self.cx-20, self.cy-20, 40, 40)
-    def draw(self):
-        drawCircle(self.cx, self.cy, 10, fill=self.color)
+        self.width, self.height = getImageSize(CMUImage(app.greenGhostForward))
+        self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, self.width, self.height)
+    def draw(self, app):
+        drawImage(CMUImage(app.greenGhostForward), self.cx - self.width/2, self.cy-self.height/2)
     def drawHealth(self):
         healthColor = 'limegreen'
         if 25 <= self.health <= 75:
@@ -138,18 +143,18 @@ class EnemyPhysical:
                 self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
 
 class EnemyRanged:
-    def __init__(self, cx, cy):
+    def __init__(self, cx, cy, app):
         self.cx = cx
         self.cy = cy
         self.type = 'ranged'
-        self.color = 'saddleBrown'
         self.health = 100
         self.powerups = set()
         self.speed = 5
         self.arrows = []
-        self.hitbox = (self.cx-20, self.cy-20, 40, 40)
-    def draw(self):
-        drawCircle(self.cx, self.cy, 10, fill=self.color)
+        self.width, self.height = getImageSize(CMUImage(app.ghostForward))
+        self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, self.width, self.height)
+    def draw(self, app):
+        drawImage(CMUImage(app.ghostForward), self.cx - self.width/2, self.cy-self.height/2)
     def drawHealth(self):
         healthColor = 'limegreen'
         if 25 <= self.health <= 75:
@@ -256,6 +261,14 @@ def onAppStart(app):
                                             'spriteRight.png'))
     app.spriteLeft = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                             'spriteLeft.png'))
+    app.ghostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'ghostForward.png'))
+    app.greenGhostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'greenGhostForward.png'))
+    app.bubbleImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'bubble.png'))
+    app.combatImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'combat.png'))
 
     app.phase = None
     app.enemyNumber = 0
@@ -283,16 +296,16 @@ def onAppStart(app):
 
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
-    app.mc = Character(25, 25)
+    app.mc = Character(25, 25, app)
 
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
     if enemyType == 0:
         (app.enemies.append(EnemyPhysical(random.randint(50, app.width - 200), 
-            random.randint(100, app.height - 50))))
+            random.randint(100, app.height - 50), app)))
     elif enemyType == 1:
         (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
-                random.randint(100, app.height - 50))))
+                random.randint(100, app.height - 50), app)))
 
 def combat_onStep(app):
     if app.mc.oxygen <= 0 or app.mc.health <= 0:
@@ -424,7 +437,8 @@ def combat_onMousePress(app, mx, my):
     app.arrows.append(newArrow)
 
 def combat_redrawAll(app):
-    drawRect(0, 0, app.width, app.height, fill='gray')
+    drawImage(CMUImage(app.combatImage), 0, 0)
+    # drawRect(0, 0, app.width, app.height, fill='gray')
     if not app.gameOver and not app.win:
         for obstacle in app.obstacles:
             x, y, width, height = obstacle
@@ -457,7 +471,7 @@ def combat_redrawAll(app):
             if distance(app.width/2, app.height/2, app.mc.cx, app.mc.cy) <= 110:
                 app.mc.health -= 25
         for enemy in app.enemies:
-            enemy.draw()
+            enemy.draw(app)
             enemy.drawHealth()
             if app.counter == 10:
                 enemy.attack(app)
@@ -466,7 +480,8 @@ def combat_redrawAll(app):
         if app.counter == 10 and len(app.oxygen) <= 5:
             addOxygen(app)
         for oxygenX, oxygenY in app.oxygen:
-            drawCircle(oxygenX, oxygenY, 10, fill='blue')
+            width, height = getImageSize(CMUImage(app.bubbleImage))
+            drawImage(CMUImage(app.bubbleImage), oxygenX-width/2, oxygenY-height/2)
         app.mc.draw(app)
         app.mc.drawHealthOxygen()
 
@@ -480,7 +495,7 @@ def generateObstacle(app):
     obstacle = app.potentialObstacles[index]
     startX, startY, width, height = obstacle
     x, y = random.randint(0, 590), random.randint(0, 430)
-    return (startX+x, startY+y, width, height)
+    return (x, y, width, height)
 
 #--------------
 def pause_onKeyPress(app, key):
