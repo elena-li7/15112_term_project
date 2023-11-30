@@ -333,7 +333,7 @@ def onAppStart(app):
     app.moonCandleImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                'moonCandle.png'))
     app.stage = 'combat'
-    app.phase = 4
+    app.phase = 1
     app.enemyNumber = 0
     app.numObstacles = 0
     app.isBoss = False
@@ -361,7 +361,11 @@ def onAppStart(app):
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
     app.moonMC = Character(50, 375, app)
+    app.moonMC.scene = 'candle'
     app.mc = Character(25, app.height-50, app)
+
+    app.candleCounter = 50
+    app.candleWarning = False
 
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
@@ -488,6 +492,8 @@ def combat_onKeyHold(app, keys):
             app.mc.move(app.characterSpeed, 0)
 
 def canMove(app, entity):
+    if app.phase != 'red' and app.phase != 'combat':
+        return True
     left1, top1, width1, height1 = entity
     for obstacle in app.obstacles:
         left2, top2, width2, height2 = obstacle
@@ -712,6 +718,10 @@ def phaseSelection_redrawAll(app):
 def phaseSelection_onMousePress(app, mx, my):
     if 100 <= my <= app.height-100:
         if app.width/5 - 45 <= mx <= app.width/5 + 45 and app.phase == 1:
+            app.moonMC.scene = 'candle'
+            app.candleWarning = False
+            app.candleCounter = 50
+            app.moonMC.cx = 50
             app.enemyNumber = 3
             for i in range(app.enemyNumber):
                 initializeNewEnemy(app)
@@ -719,8 +729,12 @@ def phaseSelection_onMousePress(app, mx, my):
             for i in range(app.numObstacles):
                 newObstacle = generateObstacle(app)
                 app.obstacles.append(newObstacle)
-            setActiveScreen('phaseOne')
+            setActiveScreen('candle')
         elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45 and app.phase == 2:
+            app.moonMC.scene = 'candle'
+            app.candleWarning = False
+            app.candleCounter = 50
+            app.moonMC.cx = 50
             app.enemyNumber = 4
             app.numObstacles = 5
             for i in range(app.enemyNumber):
@@ -729,8 +743,12 @@ def phaseSelection_onMousePress(app, mx, my):
             for i in range(app.numObstacles):
                 newObstacle = generateObstacle(app)
                 app.obstacles.append(newObstacle)
-            setActiveScreen('phaseTwo')
+            setActiveScreen('candle')
         elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45 and app.phase == 3:
+            app.moonMC.scene = 'candle'
+            app.candleWarning = False
+            app.candleCounter = 50
+            app.moonMC.cx = 50
             chance = random.randint(0, 2)
             if chance == 1 or chance == 2:
                 app.stage = 'red'
@@ -743,8 +761,12 @@ def phaseSelection_onMousePress(app, mx, my):
             for i in range(app.numObstacles):
                 newObstacle = generateObstacle(app)
                 app.obstacles.append(newObstacle)
-            setActiveScreen('phaseThree')
+            setActiveScreen('candle')
         elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45 and app.phase == 4:
+            app.moonMC.scene = 'candle'
+            app.candleWarning = False
+            app.candleCounter = 50
+            app.moonMC.cx = 50
             app.stage = 'combat'
             app.enemyStrength = 10
             app.enemyNumber = 4
@@ -756,7 +778,7 @@ def phaseSelection_onMousePress(app, mx, my):
             for i in range(app.numObstacles):
                 newObstacle = generateObstacle(app)
                 app.obstacles.append(newObstacle)
-            setActiveScreen('phaseFour')
+            setActiveScreen('candle')
 #------------
 def phaseOne_redrawAll(app):
     drawRect(0, 0, 640, 480)
@@ -818,12 +840,25 @@ def phaseFour_onMousePress(app, mx, my):
         setActiveScreen('combat')
 #---------
 def candle_onStep(app):
-    app.moonMC.scene = 'candle'
+    if app.moonMC.scene == 'combat':
+        app.candleWarning = True
+        app.candleCounter -= 0.5
+    if app.candleCounter <= 0:
+        if app.phase == 1: phase = 'phaseOne'
+        if app.phase == 2: phase = 'phaseTwo'
+        if app.phase == 3: phase = 'phaseThree'
+        if app.phase == 4: phase = 'phaseFour'
+        setActiveScreen(phase)
 def candle_redrawAll(app):
-    drawImage(CMUImage(app.moonImage), 0, 0)
-    app.moonMC.draw(app)
-    if 325 <= app.moonMC.cx <= 430:
+    if app.moonMC.scene == 'candle':
+        drawImage(CMUImage(app.moonImage), 0, 0)
+    else:
+        drawImage(CMUImage(app.moonCandleImage), 0, 0)
+    if 325 <= app.moonMC.cx <= 430 and app.moonMC.scene == 'candle':
         drawLabel('press F to place the candle.', app.width/2, 200, fill='white')
+    app.moonMC.draw(app)
+    if app.candleWarning and app.candleCounter >= 0:
+        drawLabel('!! ALERT: ENEMIES APPROACHING !!', app.width/2, 200, fill='darkred', size=30, bold=True)
 def candle_onKeyHold(app, keys):
     if 'right' in keys or 'd' in keys:
         app.moonMC.move(app.characterSpeed, 0)
