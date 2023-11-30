@@ -17,15 +17,24 @@ class Character:
         self.hitbox = (self.cx - self.width/2, self.cy - self.height/2, self.width, self.height)
         self.attackPower = 10
         self.direction = 'forward'
+        self.scene = 'combat'
     def draw(self, app):
-        if self.direction == 'forward':
-            self.sprite = app.spriteForward
-        elif self.direction == 'backward':
-            self.sprite = app.spriteBackward
-        elif self.direction == 'right':
-            self.sprite = app.spriteRight
-        elif self.direction == 'left':
-            self.sprite = app.spriteLeft
+        if self.scene == 'combat':
+            if self.direction == 'forward':
+                self.sprite = app.spriteForward
+            elif self.direction == 'backward':
+                self.sprite = app.spriteBackward
+            elif self.direction == 'right':
+                self.sprite = app.spriteRight
+            elif self.direction == 'left':
+                self.sprite = app.spriteLeft
+        elif self.scene == 'candle':
+            if self.direction == 'forward':
+                self.sprite = app.spriteForwardCandle
+            elif self.direction == 'right':
+                self.sprite = app.spriteRightCandle
+            elif self.direction == 'left':
+                self.sprite = app.spriteLeftCandle
         drawImage(CMUImage(self.sprite), self.cx-self.width/2, self.cy-self.height/2)
         self.width, self.height = getImageSize(CMUImage(self.sprite))
         self.hitbox = (self.cx - self.width/2, self.cy - self.height/2, self.width, self.height)
@@ -38,7 +47,7 @@ class Character:
             self.direction = 'left'
         if dy > 0:
             self.direction = 'forward'
-        if dy < 0:
+        if dy < 0 and self.scene != 'candle':
             self.direction = 'backward'
         self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
         if self.cx <= 0: self.cx = 5
@@ -313,6 +322,16 @@ def onAppStart(app):
                                                'gameOver.png'))
     app.victoryImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                'victory.png'))
+    app.spriteForwardCandle = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'spriteForwardCandle.png'))
+    app.spriteRightCandle = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'spriteRightCandle.png'))
+    app.spriteLeftCandle = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'spriteLeftCandle.png'))
+    app.moonImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'moon.png'))
+    app.moonCandleImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'moonCandle.png'))
     app.stage = 'combat'
     app.phase = 4
     app.enemyNumber = 0
@@ -341,6 +360,7 @@ def onAppStart(app):
 
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
+    app.moonMC = Character(50, 375, app)
     app.mc = Character(25, app.height-50, app)
 
 def initializeNewEnemy(app):
@@ -540,7 +560,7 @@ def combat_redrawAll(app):
         app.mc.drawHealthOxygen(app)
 
 def addOxygen(app):
-    newX = random.randint(50, 550)
+    newX = random.randint(50, 450)
     newY = random.randint(70, app.height - 60)
     app.oxygen.append((newX, newY))
 
@@ -612,12 +632,12 @@ def tutorial_redrawAll(app):
     drawImage(CMUImage(app.tutorialImage), 0, 0)
     drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
     drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
-    drawLabel('1. Use WASD or arrow keys to move.', 150, 150, fill='moccasin', 
-              size=15, align='left')
-    drawLabel('2. Replenish oxygen by collecting oxygen particles.', 150, 200, 
-              fill='moccasin', size=15, align='left')
-    drawLabel('3. Defeat enemies by shooting arrows (mouse press)', 150, 250, 
-              fill='moccasin', size=15, align='left')
+    drawLabel('1. Use WASD or arrow keys to move.', 150, 200, fill='moccasin', 
+              size=15, align='left', bold=True)
+    drawLabel('2. Replenish oxygen by collecting oxygen particles.', 150, 250, 
+              fill='moccasin', size=15, align='left', bold=True)
+    drawLabel('3. Defeat enemies by shooting arrows (mouse press).', 150, 300, 
+              fill='moccasin', size=15, align='left', bold=True)
 
 def tutorial_onMousePress(app, mx, my):
     if 80 <= mx <= 130 and 350 <= my <= 400:
@@ -797,9 +817,28 @@ def phaseFour_onMousePress(app, mx, my):
         app.phase = 4
         setActiveScreen('combat')
 #---------
+def candle_onStep(app):
+    app.moonMC.scene = 'candle'
 def candle_redrawAll(app):
-    drawRect(0, 0, 640, 480)
-    drawOval(app.width/2, app.height-75, app.width+100, 300, fill='white')
+    drawImage(CMUImage(app.moonImage), 0, 0)
+    app.moonMC.draw(app)
+    if 325 <= app.moonMC.cx <= 430:
+        drawLabel('press F to place the candle.', app.width/2, 200, fill='white')
+def candle_onKeyHold(app, keys):
+    if 'right' in keys or 'd' in keys:
+        app.moonMC.move(app.characterSpeed, 0)
+        if not canMove(app, app.moonMC.hitbox):
+            app.moonMC.move(-1 * app.characterSpeed, 0)
+    if 'left' in keys or 'a' in keys:
+        app.moonMC.move(-1 * app.characterSpeed, 0)
+        if not canMove(app, app.moonMC.hitbox):
+            app.moonMC.move(app.characterSpeed, 0)
+
+def candle_onKeyPress(app, key):
+    if 325 <= app.moonMC.cx <= 430 and key =='f':
+        app.moonMC.scene = 'combat'
+        
+
 
 def main():
     runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
@@ -809,4 +848,5 @@ main()
 '''
 notes:
 lighting the candle!!
+fix the change scenes things
 '''
