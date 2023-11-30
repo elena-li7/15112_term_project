@@ -309,8 +309,12 @@ def onAppStart(app):
                                                'darkRedGhostForward.png'))
     app.combatRed = Image.open(os.path.join(pathlib.Path(__file__).parent,
                                                'combatRed.png'))
+    app.gameOverImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'gameOver.png'))
+    app.victoryImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
+                                               'victory.png'))
     app.stage = 'combat'
-    app.phase = 1
+    app.phase = 4
     app.enemyNumber = 0
     app.numObstacles = 0
     app.isBoss = False
@@ -333,6 +337,7 @@ def onAppStart(app):
     app.obstacles = []
 
     app.characterSpeed = 5
+    app.enemyStrength = 10
 
     app.enemyTypes = ['physical', 'ranged']
     app.counter = 0
@@ -341,7 +346,7 @@ def onAppStart(app):
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
     if enemyType == 0:
-        (app.enemies.append(EnemyPhysical(random.randint(50, app.width - 200), 
+        (app.enemies.append(EnemyPhysical(random.randint(50, 550), 
             random.randint(100, app.height - 50), app)))
     elif enemyType == 1:
         (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
@@ -369,7 +374,7 @@ def combat_onStep(app):
             hitChance = random.randint(0, 1)
             if hitChance == 0:
                 # mc is hit
-                app.mc.health -= 10
+                app.mc.health -= app.enemyStrength
                 if app.mc.health <= 0:
                     app.mc.health = 0
                     app.gameOver = True
@@ -397,7 +402,7 @@ def combat_onStep(app):
             if (rectanglesOverlap(left1, top1, width1, height1, 
                                   left2, top2, width2, height2)
                 and arrow.entity =='enemy'):
-                app.mc.health -= 5
+                app.mc.health -= app.enemyStrength//2
                 if app.mc.health <= 0:
                     app.mc.health = 0
                     app.gameOver = True
@@ -518,7 +523,7 @@ def combat_redrawAll(app):
             # boss explodes and deals a large amount of dmg              
             drawCircle(app.width/2, app.height/2, 100, fill='orange')
             if distance(app.width/2, app.height/2, app.mc.cx, app.mc.cy) <= 110:
-                app.mc.health -= 25
+                app.mc.health -= 1
         for enemy in app.enemies:
             enemy.draw(app)
             enemy.drawHealth()
@@ -535,15 +540,15 @@ def combat_redrawAll(app):
         app.mc.drawHealthOxygen(app)
 
 def addOxygen(app):
-    newX = random.randint(50, app.width - 200)
-    newY = random.randint(50, app.height - 50)
+    newX = random.randint(50, 550)
+    newY = random.randint(70, app.height - 60)
     app.oxygen.append((newX, newY))
 
 def generateObstacle(app):
     index = random.randint(0, 2)
     obstacle = app.potentialObstacles[index]
     startX, startY, width, height = obstacle
-    x, y = random.randint(0, 590), random.randint(0, 430)
+    x, y = random.randint(50, 550), random.randint(110, 430)
     return (x, y, width, height)
 
 #--------------
@@ -568,8 +573,7 @@ def pause_onMousePress(app, mx, my):
 #--------------
 def titleScreen_redrawAll(app):
     drawImage(CMUImage(app.titleImage), 0, 0)
-    drawRect(app.width - 100, app.height - 100, 75, 75, borderWidth=5, border=rgb(176, 120, 30))
-    drawStar(app.width - 62.5, app.height-62.5, 25, 4, fill=rgb(176, 120, 30))
+    drawRect(app.width - 98, app.height - 98, 75, 75, borderWidth=5, border=rgb(176, 120, 30), fill=None)
 
 def titleScreen_onMousePress(app, mx, my):
     if 115 <= mx <= 215 and app.height/2 - 40 <= my <= app.height/2+40:
@@ -577,7 +581,7 @@ def titleScreen_onMousePress(app, mx, my):
         setActiveScreen('phaseSelection')
     if 115 <= mx <= 215 and app.height/2 + 62 <= my <= app.height/2 + 142:
         setActiveScreen('tutorial')
-    if app.width-100 <= mx <= app.width-25 and app.height-100 <= my <= app.height-25:
+    if app.width-98 <= mx <= app.width-23 and app.height-98 <= my <= app.height-23:
         setActiveScreen('settings')
 #--------------
 def settings_redrawAll(app):
@@ -620,9 +624,22 @@ def tutorial_onMousePress(app, mx, my):
         setActiveScreen('titleScreen')
 #--------------
 def gameOver_redrawAll(app):
-    drawRect(0, 0, 640, 480)
-    drawLabel('GAME', app.width/2, 100, fill='darkRed', size=50)
-    drawLabel('OVER', app.width/2, 175, fill='darkRed', size=50)
+    drawImage(CMUImage(app.gameOverImage), 0, 0)
+    drawRect(app.width/2 - 100, app.height/2 + 40, 200, 50, fill='darkred')
+    drawRect(app.width/2 - 100, app.height/2 + 110, 200, 50, fill='darkred')
+    drawLabel('TRY AGAIN', app.width/2, app.height/2 + 65, fill='mistyRose', size=20, bold=True)
+    drawLabel('QUIT', app.width/2, app.height/2 + 135, fill='mistyRose', size=20, bold=True)
+
+def gameOver_onMousePress(app, mx, my):
+    if app.width/2-100 <= mx <= app.width/2+ 100:
+        if app.height/2 + 40 <= my <= app.height/2 + 90:
+            app.gameOver = False
+            app.boss.health = 100
+            app.mc.health = app.mc.oxygen = 100
+            app.enemies = []
+            setActiveScreen('phaseSelection')
+        if app.height/2 + 110 <= my <= app.height/2 + 160:
+            setActiveScreen('titleScreen')
 #--------------
 def win_redrawAll(app):
     drawRect(0, 0, 640, 480)
@@ -632,18 +649,20 @@ def win_redrawAll(app):
         drawImage(CMUImage(app.phaseTwoWin), 0, 0)
     if app.phase == 3:
         drawImage(CMUImage(app.phaseThreeWin), 0, 0)
-    # if app.phase == 4:
-    #     drawImage(CMUImage(app.phaseOneWin), 0, 0)
 
-    # drawLabel('NEXT PHASE', app.width/2, app.height/2 + 30, fill=rgb(176, 120, 30), size=25)
-    # drawRect(app.width/2 - 40, app.height/2 - 40, 80, 80, fill='white')
-
+    drawLabel('NEXT PHASE', app.width/2, app.height/2 + 100, fill=rgb(176, 120, 30), size=25)
+    if app.phase == 4:
+        drawImage(CMUImage(app.victoryImage), 0, 0)
+        drawRect(app.width/2 - 100, app.height/2 + 50, 200, 50, fill=rgb(176, 120, 30))
+        drawLabel('RETURN HOME', app.width/2, app.height/2 +75, fill='darkblue', size=20, bold=True)
 def win_onMousePress(app, mx, my):
-    if app.width/2 - 40 <= mx <= app.width/2 + 40 and app.height/2 - 40 <= my <= app.height/2 + 40:
+    if app.width/2 - 40 <= mx <= app.width/2 + 40 and app.height/2 - 40 <= my <= app.height/2 + 40 and app.phase != 4:
         app.phase += 1
         app.win = False
         app.mc.health = app.mc.oxygen = 100
         setActiveScreen('phaseSelection')
+    if app.width/2 - 100 <= mx <= app.width/2 + 100 and app.height/2+50 <= my <= app.height/2 + 100 and app.phase == 4:
+        setActiveScreen('titleScreen')
 #--------------
 def phaseSelection_redrawAll(app):
     color1 = color2 = color3 = color4 = None
@@ -682,7 +701,7 @@ def phaseSelection_onMousePress(app, mx, my):
                 app.obstacles.append(newObstacle)
             setActiveScreen('phaseOne')
         elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45 and app.phase == 2:
-            app.enemyNumber = 3
+            app.enemyNumber = 4
             app.numObstacles = 5
             for i in range(app.enemyNumber):
                 initializeNewEnemy(app)
@@ -692,9 +711,12 @@ def phaseSelection_onMousePress(app, mx, my):
                 app.obstacles.append(newObstacle)
             setActiveScreen('phaseTwo')
         elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45 and app.phase == 3:
-            app.stage = 'red'
-            app.enemyNumber = 3
-            app.numObstacles = 5
+            chance = random.randint(0, 2)
+            if chance == 1 or chance == 2:
+                app.stage = 'red'
+                app.enemyStrength = 15
+            app.enemyNumber = 5
+            app.numObstacles = 7
             for i in range(app.enemyNumber):
                 initializeNewEnemy(app)
             app.obstacles = []
@@ -704,7 +726,8 @@ def phaseSelection_onMousePress(app, mx, my):
             setActiveScreen('phaseThree')
         elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45 and app.phase == 4:
             app.stage = 'combat'
-            app.enemyNumber = 3
+            app.enemyStrength = 10
+            app.enemyNumber = 4
             app.numObstacles = 7
             app.isBoss = True
             for i in range(app.enemyNumber):
@@ -744,9 +767,15 @@ def phaseTwo_onMousePress(app, mx, my):
 #------------
 def phaseThree_redrawAll(app):
     drawRect(0, 0, 640, 480)
-    drawLabel('LAST QUARTER', app.width/2, 75, fill='white', bold=True, size=30)
-    drawCircle(app.width/2, app.height/2, 100, fill=None, border='white', borderWidth=5)
-    drawArc(app.width/2, app.height/2, 200, 200, 90, 180, fill='white')
+    if app.stage == 'red':
+        color = 'red'
+        label = 'RANDOM EVENT: BLOOD MOON'
+    else:
+        color = 'white'
+        label = 'LAST QUARTER'
+    drawLabel(label, app.width/2, 75, fill=color, bold=True, size=30)
+    drawCircle(app.width/2, app.height/2, 100, fill=None, border=color, borderWidth=5)
+    drawArc(app.width/2, app.height/2, 200, 200, 90, 180, fill=color)
     drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
     drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
 
@@ -773,14 +802,11 @@ def candle_redrawAll(app):
     drawOval(app.width/2, app.height-75, app.width+100, 300, fill='white')
 
 def main():
-    runAppWithScreens(width=640, height=480, initialScreen='combat')
+    runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
 
 main()
 
 '''
 notes:
-add a nicer pause screen
-add in chance for blood moon or eclipse phase
-make sure to buff enemies for these ^^
 lighting the candle!!
 '''
