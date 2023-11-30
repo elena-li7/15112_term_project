@@ -166,6 +166,7 @@ class EnemyPhysical:
                 self.cy += self.speed
                 self.cx += 50
                 self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
+
 class EnemyRanged:
     def __init__(self, cx, cy, app):
         self.cx = cx
@@ -206,7 +207,8 @@ class EnemyBoss:
         self.speed = 5
         self.arrows = []
         self.width, self.height = getImageSize(CMUImage(app.bossImage))
-        self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, self.width, self.height)
+        self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, 
+                       self.width, self.height)
         self.attackPower = 5
     def draw(self, app):
         drawImage(CMUImage(app.bossImage), self.cx-self.width/2, self.cy-self.height/2)        
@@ -246,7 +248,6 @@ class EnemyBoss:
         drawRect(self.cx, self.cy, 1000, 10, rotateAngle=angle, align ='center', 
                  opacity = opacity, fill='red')
     def quakeAttack(self, app, state):
-        # cx, cy = random.randint(self.cx - 100, self.cx + 100), random.randint(self.cy - 100, self.cy + 100) 
         targetX, targetY = app.mc.cx, app.mc.cy
         hitChance = random.randint(0, 3)
         if state == 'attack':
@@ -366,15 +367,22 @@ def onAppStart(app):
 
     app.candleCounter = 50
     app.candleWarning = False
+    app.candleCenter = 385
+
+    app.skillCounter = 60
+    app.skillReady = True
+
+    app.horizLeft, app.horizRight = 50, 550
+    app.vertTop, app.vertBot = (150, 400)
 
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
     if enemyType == 0:
-        (app.enemies.append(EnemyPhysical(random.randint(50, 550), 
-            random.randint(100, app.height - 50), app)))
+        (app.enemies.append(EnemyPhysical(random.randint(app.horizLeft, app.horizRight), 
+            random.randint(app.vertTop, app.vertBot), app)))
     elif enemyType == 1:
-        (app.enemies.append(EnemyRanged(random.randint(50, app.width - 200),
-                random.randint(100, app.height - 50), app)))
+        (app.enemies.append(EnemyRanged(random.randint(app.horizLeft, app.horizRight),
+                random.randint(app.vertTop, app.vertBot), app)))
 
 def combat_onStep(app):
     if app.mc.oxygen <= 0 or app.mc.health <= 0:
@@ -387,6 +395,13 @@ def combat_onStep(app):
     if app.counter == 20:
         app.counter = 0
         app.mc.loseOxygen(app)
+    if not app.skillReady:
+        app.skillCounter -= 0.5
+        if app.skillCounter == 30:
+            app.mc.attackPower = 10
+        if app.skillCounter <= 0:
+            app.skillReady = True
+            app.skillCounter = 60
     for enemy in app.enemies:
         left1, top1, width1, height1 = enemy.hitbox
         left2, top2, width2, height2 = app.mc.hitbox
@@ -470,7 +485,9 @@ def combat_onStep(app):
 def combat_onKeyPress(app, key):
     if key == 'p':
         setActiveScreen('pause')
-
+    if key == 'e' and app.skillReady:
+        app.mc.attackPower = 15
+        app.skillReady = False
 def combat_onKeyHold(app, keys):
     if app.gameOver or app.win: return
     # mc movement
@@ -492,7 +509,7 @@ def combat_onKeyHold(app, keys):
             app.mc.move(app.characterSpeed, 0)
 
 def canMove(app, entity):
-    if app.phase != 'red' and app.phase != 'combat':
+    if app.stage != 'red' and app.stage != 'combat':
         return True
     left1, top1, width1, height1 = entity
     for obstacle in app.obstacles:
@@ -564,17 +581,27 @@ def combat_redrawAll(app):
             drawImage(CMUImage(app.bubbleImage), oxygenX-width/2, oxygenY-height/2)
         app.mc.draw(app)
         app.mc.drawHealthOxygen(app)
+        drawSkill(app)
+
+def drawSkill(app):
+    drawCircle(550, 400, 50, fill=rgb(176, 120, 30), border='gold')
+    if app.skillReady:
+        status1, status2 = 'SKILL', 'READY'
+    else:
+        status1, status2 = 'COOLING','DOWN'
+    drawLabel(f'{status1}', 550, 390, fill='gold', size=20, bold=True)
+    drawLabel(f'{status2}', 550, 410, fill='gold', size=20, bold=True)
 
 def addOxygen(app):
-    newX = random.randint(50, 450)
-    newY = random.randint(70, app.height - 60)
+    newX = random.randint(app.horizLeft, app.horizRight)
+    newY = random.randint(app.vertTop, app.vertBot)
     app.oxygen.append((newX, newY))
 
 def generateObstacle(app):
     index = random.randint(0, 2)
     obstacle = app.potentialObstacles[index]
     startX, startY, width, height = obstacle
-    x, y = random.randint(50, 550), random.randint(110, 430)
+    x, y = random.randint(app.horizLeft, app.horizRight), random.randint(app.vertTop, app.vertBot)
     return (x, y, width, height)
 
 #--------------
@@ -643,6 +670,8 @@ def tutorial_redrawAll(app):
     drawLabel('2. Replenish oxygen by collecting oxygen particles.', 150, 250, 
               fill='moccasin', size=15, align='left', bold=True)
     drawLabel('3. Defeat enemies by shooting arrows (mouse press).', 150, 300, 
+              fill='moccasin', size=15, align='left', bold=True)
+    drawLabel('4. Press e to use skill (ATK boost).', 150, 350, 
               fill='moccasin', size=15, align='left', bold=True)
 
 def tutorial_onMousePress(app, mx, my):
@@ -717,67 +746,18 @@ def phaseSelection_redrawAll(app):
 
 def phaseSelection_onMousePress(app, mx, my):
     if 100 <= my <= app.height-100:
+        app.mc.cx, app.mc.cy = 25, app.height-50
+        app.moonMC.cx = 50
+        app.moonMC.scene = 'candle'
+        app.candleWarning = False
+        app.candleCounter = 50
         if app.width/5 - 45 <= mx <= app.width/5 + 45 and app.phase == 1:
-            app.moonMC.scene = 'candle'
-            app.candleWarning = False
-            app.candleCounter = 50
-            app.moonMC.cx = 50
-            app.enemyNumber = 3
-            for i in range(app.enemyNumber):
-                initializeNewEnemy(app)
-            app.obstacles = []
-            for i in range(app.numObstacles):
-                newObstacle = generateObstacle(app)
-                app.obstacles.append(newObstacle)
             setActiveScreen('candle')
         elif app.width/5*2 - 45 <= mx <= app.width/5*2 + 45 and app.phase == 2:
-            app.moonMC.scene = 'candle'
-            app.candleWarning = False
-            app.candleCounter = 50
-            app.moonMC.cx = 50
-            app.enemyNumber = 4
-            app.numObstacles = 5
-            for i in range(app.enemyNumber):
-                initializeNewEnemy(app)
-            app.obstacles = []
-            for i in range(app.numObstacles):
-                newObstacle = generateObstacle(app)
-                app.obstacles.append(newObstacle)
             setActiveScreen('candle')
         elif app.width/5*3 - 45 <= mx <= app.width/5*3 + 45 and app.phase == 3:
-            app.moonMC.scene = 'candle'
-            app.candleWarning = False
-            app.candleCounter = 50
-            app.moonMC.cx = 50
-            chance = random.randint(0, 2)
-            if chance == 1 or chance == 2:
-                app.stage = 'red'
-                app.enemyStrength = 15
-            app.enemyNumber = 5
-            app.numObstacles = 7
-            for i in range(app.enemyNumber):
-                initializeNewEnemy(app)
-            app.obstacles = []
-            for i in range(app.numObstacles):
-                newObstacle = generateObstacle(app)
-                app.obstacles.append(newObstacle)
             setActiveScreen('candle')
         elif app.width/5*4 - 45 <= mx <= app.width/5*4 + 45 and app.phase == 4:
-            app.moonMC.scene = 'candle'
-            app.candleWarning = False
-            app.candleCounter = 50
-            app.moonMC.cx = 50
-            app.stage = 'combat'
-            app.enemyStrength = 10
-            app.enemyNumber = 4
-            app.numObstacles = 7
-            app.isBoss = True
-            for i in range(app.enemyNumber):
-                initializeNewEnemy(app)
-            app.obstacles = []
-            for i in range(app.numObstacles):
-                newObstacle = generateObstacle(app)
-                app.obstacles.append(newObstacle)
             setActiveScreen('candle')
 #------------
 def phaseOne_redrawAll(app):
@@ -840,21 +820,67 @@ def phaseFour_onMousePress(app, mx, my):
         setActiveScreen('combat')
 #---------
 def candle_onStep(app):
+    app.stage = 'candle'
     if app.moonMC.scene == 'combat':
         app.candleWarning = True
         app.candleCounter -= 0.5
     if app.candleCounter <= 0:
-        if app.phase == 1: phase = 'phaseOne'
-        if app.phase == 2: phase = 'phaseTwo'
-        if app.phase == 3: phase = 'phaseThree'
-        if app.phase == 4: phase = 'phaseFour'
+        if app.phase == 1: 
+            app.stage = 'combat'
+            phase = 'phaseOne'
+            app.enemyNumber = 3
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
+        if app.phase == 2: 
+            app.stage = 'combat'
+            phase = 'phaseTwo'
+            app.enemyNumber = 4
+            app.numObstacles = 5
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
+        if app.phase == 3: 
+            app.stage = 'combat'
+            phase = 'phaseThree'
+            chance = random.randint(0, 2)
+            if chance == 1 or chance == 2:
+                app.stage = 'red'
+                app.enemyStrength = 15
+            app.enemyNumber = 5
+            app.numObstacles = 7
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
+        if app.phase == 4: 
+            app.stage = 'combat'
+            phase = 'phaseFour'
+            app.enemyStrength = 10
+            app.enemyNumber = 4
+            app.numObstacles = 7
+            app.isBoss = True
+            for i in range(app.enemyNumber):
+                initializeNewEnemy(app)
+            app.obstacles = []
+            for i in range(app.numObstacles):
+                newObstacle = generateObstacle(app)
+                app.obstacles.append(newObstacle)
         setActiveScreen(phase)
 def candle_redrawAll(app):
     if app.moonMC.scene == 'candle':
         drawImage(CMUImage(app.moonImage), 0, 0)
     else:
         drawImage(CMUImage(app.moonCandleImage), 0, 0)
-    if 325 <= app.moonMC.cx <= 430 and app.moonMC.scene == 'candle':
+    if app.candleCenter - 50 <= app.moonMC.cx <= app.candleCenter + 50 and app.moonMC.scene == 'candle':
         drawLabel('press F to place the candle.', app.width/2, 200, fill='white')
     app.moonMC.draw(app)
     if app.candleWarning and app.candleCounter >= 0:
@@ -870,18 +896,10 @@ def candle_onKeyHold(app, keys):
             app.moonMC.move(app.characterSpeed, 0)
 
 def candle_onKeyPress(app, key):
-    if 325 <= app.moonMC.cx <= 430 and key =='f':
+    if app.candleCenter-50 <= app.moonMC.cx <= app.candleCenter + 50 and key =='f':
         app.moonMC.scene = 'combat'
-        
-
 
 def main():
     runAppWithScreens(width=640, height=480, initialScreen='titleScreen')
 
 main()
-
-'''
-notes:
-lighting the candle!!
-fix the change scenes things
-'''
