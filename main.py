@@ -9,57 +9,40 @@ class Character:
         self.sprite = app.spriteForward
         self.health = 100
         self.oxygen = 100
-        self.powerups = set()
         self.cx = cx
         self.cy = cy
         self.arrows = []
         self.width, self.height = getImageSize(CMUImage(self.sprite))
         self.hitbox = (self.cx - self.width/2, self.cy - self.height/2, self.width, self.height)
         self.attackPower = 10
-        self.direction = 'forward'
         self.scene = 'combat'
     def draw(self, app):
-        if self.scene == 'combat':
-            if self.direction == 'forward':
-                self.sprite = app.spriteForward
-            elif self.direction == 'backward':
-                self.sprite = app.spriteBackward
-            elif self.direction == 'right':
-                self.sprite = app.spriteRight
-            elif self.direction == 'left':
-                self.sprite = app.spriteLeft
-        elif self.scene == 'candle':
-            if self.direction == 'forward':
-                self.sprite = app.spriteForwardCandle
-            elif self.direction == 'right':
-                self.sprite = app.spriteRightCandle
-            elif self.direction == 'left':
-                self.sprite = app.spriteLeftCandle
         drawImage(CMUImage(self.sprite), self.cx-self.width/2, self.cy-self.height/2)
         self.width, self.height = getImageSize(CMUImage(self.sprite))
         self.hitbox = (self.cx - self.width/2, self.cy - self.height/2, self.width, self.height)
-    def move(self, dx, dy):
+    def move(self, dx, dy, app):
         self.cx += dx
         self.cy += dy
         if dx > 0:
-            self.direction = 'right'
+            self.sprite = app.spriteRight if self.scene != 'candle' else app.spriteRightCandle
         if dx < 0:
-            self.direction = 'left'
+            self.sprite = app.spriteLeft if self.scene != 'candle' else app.spriteLeftCandle
         if dy > 0:
-            self.direction = 'forward'
+            self.sprite = app.spriteForward if self.scene != 'candle' else app.spriteForwardCandle
         if dy < 0 and self.scene != 'candle':
-            self.direction = 'backward'
+            self.sprite = app.spriteBackward if self.scene != 'candle' else app.spriteBackwardCandle
         self.hitbox = (self.cx - 10, self.cy - 10, 20, 20)
         if self.cx <= 0: self.cx = 5
-        if self.cx >= 640: self.cx = 635
+        if self.cx >= app.width: self.cx = app.width - 5
         if self.cy <= 0: self.cy = 5
-        if self.cy >= 480: self.cy = 475
+        if self.cy >= app.width: self.cy = app.width - 5
     def drawHealthOxygen(self, app):
-        drawImage(CMUImage(app.heartImage), 520, 15)
-        drawLabel(f'   {self.health}', 560, 25, font='symbols', 
+        iconX, iconY = 520, 15
+        drawImage(CMUImage(app.heartImage), iconX, iconY)
+        drawLabel(f'   {self.health}', iconX + 40, iconY + 10, font='symbols', 
             size=30, fill='darkred')
-        drawImage(CMUImage(app.bubbleImage), 520, 55)
-        drawLabel(f'   {self.oxygen}', 560, 65, font='symbols', 
+        drawImage(CMUImage(app.bubbleImage), iconX, iconY + 40)
+        drawLabel(f'   {self.oxygen}', iconX + 40, iconY + 50, font='symbols', 
             size=30, fill='blue')
     def loseOxygen(self, app):
         self.oxygen -= 5
@@ -72,25 +55,22 @@ class Character:
             self.oxygen = 100
     
 class Arrow:
-    def __init__(self, startX, startY, x, y, entity):
-        self.entity = entity
-        self.startX = startX
-        self.startY = startY
-        self.dx = None
-        self.dy = None
-        self.hitbox = (self.startX - 10, self.startY-10, 50, 25)
-        self.x = x
-        self.y = y
-        vecX, vecY = self.x - self.startX, self.y-self.startY
-        mag = ((vecX)**2 + (vecY)**2)**0.5
-        unitvecX, unitvecY = vecX/mag, vecY/mag
+    def __init__(self, startX, startY, targetX, targetY, entity):
+        self.entity = entity # determines if arrow belongs to player or enemy
+        self.startX, self.startY = startX, startY
+        self.targetX, self.targetY = targetX, targetY
+        self.dx = self.dy = None
+        self.hitbox = (self.startX - 10, self.startY - 10, 50, 25)
+        vecX, vecY = self.targetX - self.startX, self.targetY - self.startY
+        magnitude = ((vecX)**2 + (vecY)**2)**0.5
+        unitvecX, unitvecY = vecX/magnitude, vecY/magnitude
         unitvecX *= 5
         unitvecY *= 5
         self.dx, self.dy = unitvecX, unitvecY
     def draw(self, app):
-        distX = self.x - self.startX
-        distY = self.y - self.startY
-        dist = distance(self.x, self.y, self.startX, self.startY)
+        distX = self.targetX - self.startX
+        distY = self.targetY - self.startY
+        dist = distance(self.targetX, self.targetY, self.startX, self.startY)
         angle = math.asin(distY / dist)
         if distX > 0:
             angle = math.degrees(angle) + 120
@@ -104,11 +84,8 @@ class Arrow:
 
 class EnemyPhysical:
     def __init__(self, cx, cy, app):
-        self.cx = cx
-        self.cy = cy
-        self.type = 'physical'
+        self.cx, self.cy = cx, cy
         self.health = 100
-        self.powerups = set()
         self.speed = 20
         self.arrows = []
         self.width, self.height = getImageSize(CMUImage(app.greenGhostForward))
@@ -128,52 +105,41 @@ class EnemyPhysical:
         drawRect(self.cx - 20, self.cy + 35, self.health / 100 * 40, 10,
              fill=healthColor)
     def attack(self, app):
-        targetX = app.mc.cx
-        targetY = app.mc.cy
+        targetX, targetY = app.mc.cx, app.mc.cy
         if targetX - self.cx > 0:
             self.cx += self.speed
             if self.cx > app.width - 25:
                 self.cx = app.width - 25
-            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
             while not canMove(app, self.hitbox):
                 self.cx -= self.speed
                 self.cy += 50
-                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cx -= self.speed
             if self.cx < 25:
                 self.cx = 25
-            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
             while not canMove(app, self.hitbox):
                 self.cx += self.speed
                 self.cy -= 50
-                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         if targetY - self.cy > 0:
             self.cy += self.speed
             if self.cy > app.height - 30:
                 self.cy = app.height - 30
-            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
             while not canMove(app, self.hitbox):
                 self.cy -= self.speed
                 self.cx -= 50
-                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
         else:
             self.cy -= self.speed
             if self.cy < 30:
                 self.cy = 30
-            self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
             while not canMove(app, self.hitbox):
                 self.cy += self.speed
                 self.cx += 50
-                self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
+        self.hitbox = (self.cx - 20, self.cy-20, 40, 40)
 
 class EnemyRanged:
     def __init__(self, cx, cy, app):
-        self.cx = cx
-        self.cy = cy
-        self.type = 'ranged'
+        self.cx, self.cy = cx, cy
         self.health = 100
-        self.powerups = set()
         self.speed = 5
         self.arrows = []
         self.width, self.height = getImageSize(CMUImage(app.ghostForward))
@@ -198,18 +164,14 @@ class EnemyRanged:
 
 class EnemyBoss:
     def __init__(self, cx, cy, app):
-        self.cx = cx
-        self.cy = cy
-        self.type = 'boss'
+        self.cx, self.cy = cx, cy
         self.color = 'red'
         self.health = 100
-        self.powerups = set()
         self.speed = 5
-        self.arrows = []
+        self.attackPower = 5
         self.width, self.height = getImageSize(CMUImage(app.bossImage))
         self.hitbox = (self.cx-self.width/2, self.cy-self.height/2, 
                        self.width, self.height)
-        self.attackPower = 5
     def draw(self, app):
         drawImage(CMUImage(app.bossImage), self.cx-self.width/2, self.cy-self.height/2)        
         drawCircle(self.cx, self.cy, 150, fill=None, border='gray', borderWidth=5)
@@ -228,7 +190,6 @@ class EnemyBoss:
         distY = app.mc.cy - self.cy
         dist = distance(app.mc.cx, app.mc.cy, self.cx, self.cy)
         angle = math.asin(distY / dist)
-        
         if distX > 0:
             angle = math.degrees(angle)
         else:
@@ -259,9 +220,7 @@ class EnemyBoss:
         elif state == 'warning':
             opacity = 20
             drawCircle(targetX, targetY, 30, fill='purple', opacity=opacity)
-
-    def lastDitchAttack(self, app):
-        self.color='gold'
+    def lastDitchAttack(self):
         self.attackPower = 10
 
 ###############################################################################
@@ -276,63 +235,37 @@ def rectanglesOverlap(left1, top1, width1, height1,
 ###############################################################################
 
 def distance(x0, y0, x1, y1):
-    return ( (x0-x1)**2 + (y0-y1)**2 ) **0.5
+    return ( (x0-x1)**2 + (y0-y1)**2 ) ** 0.5
 
 def onAppStart(app):
-    app.tutorialImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                                'tutorial.png'))
-    app.titleImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 
-                                             'titlescreen.png'))
-    app.settingsImage = Image.open(os.path.join(pathlib.Path(__file__).parent, 
-                                             'settings.png'))
-    app.arrowImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                            'arrow.png'))
-    app.spriteForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                            'spriteForward.png'))
-    app.spriteBackward = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                            'spriteBackward.png'))
-    app.spriteRight = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                            'spriteRight.png'))
-    app.spriteLeft = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                            'spriteLeft.png'))
-    app.ghostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'ghostForward.png'))
-    app.greenGhostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'greenGhostForward.png'))
-    app.bubbleImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'bubble.png'))
-    app.combatImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'combat.png'))
-    app.bossImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'boss.png'))
-    app.heartImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'heart.png'))
-    app.phaseOneWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'phaseOneWin.png'))
-    app.phaseTwoWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'phaseTwoWin.png'))
-    app.phaseThreeWin = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'phaseThreeWin.png'))
-    app.redGhostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'redGhostForward.png'))
-    app.darkRedGhostForward = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'darkRedGhostForward.png'))
-    app.combatRed = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'combatRed.png'))
-    app.gameOverImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'gameOver.png'))
-    app.victoryImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'victory.png'))
-    app.spriteForwardCandle = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'spriteForwardCandle.png'))
-    app.spriteRightCandle = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'spriteRightCandle.png'))
-    app.spriteLeftCandle = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'spriteLeftCandle.png'))
-    app.moonImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'moon.png'))
-    app.moonCandleImage = Image.open(os.path.join(pathlib.Path(__file__).parent,
-                                               'moonCandle.png'))
+    app.tutorialImage = Image.open('tutorial.png')
+    app.titleImage = Image.open('titlescreen.png')
+    app.settingsImage = Image.open('settings.png')
+    app.arrowImage = Image.open('arrow.png')
+    app.spriteForward = Image.open('spriteForward.png')
+    app.spriteBackward = Image.open('spriteBackward.png')
+    app.spriteRight = Image.open('spriteRight.png')
+    app.spriteLeft = Image.open('spriteLeft.png')
+    app.ghostForward = Image.open('ghostForward.png')
+    app.greenGhostForward = Image.open('greenGhostForward.png')
+    app.bubbleImage = Image.open('bubble.png')
+    app.combatImage = Image.open('combat.png')
+    app.bossImage = Image.open('boss.png')
+    app.heartImage = Image.open('heart.png')
+    app.phaseOneWin = Image.open('phaseOneWin.png')
+    app.phaseTwoWin = Image.open('phaseTwoWin.png')
+    app.phaseThreeWin = Image.open('phaseThreeWin.png')
+    app.redGhostForward = Image.open('redGhostForward.png')
+    app.darkRedGhostForward = Image.open('darkRedGhostForward.png')
+    app.combatRed = Image.open('combatRed.png')
+    app.gameOverImage = Image.open('gameOver.png')
+    app.victoryImage = Image.open('victory.png')
+    app.spriteForwardCandle = Image.open('spriteForwardCandle.png')
+    app.spriteRightCandle = Image.open('spriteRightCandle.png')
+    app.spriteLeftCandle = Image.open('spriteLeftCandle.png')
+    app.moonImage = Image.open('moon.png')
+    app.moonCandleImage = Image.open('moonCandle.png')
+
     app.stage = 'combat'
     app.phase = 1
     app.enemyNumber = 0
@@ -372,8 +305,9 @@ def onAppStart(app):
     app.skillCounter = 60
     app.skillReady = True
 
+    # bounds for enemy / oxygen spawn points
     app.horizLeft, app.horizRight = 50, 550
-    app.vertTop, app.vertBot = (150, 400)
+    app.vertTop, app.vertBot = 150, 400
 
 def initializeNewEnemy(app):
     enemyType = random.randint(0, 1)
@@ -407,9 +341,8 @@ def combat_onStep(app):
         left2, top2, width2, height2 = app.mc.hitbox
         # check for physical enemy attacks
         if (rectanglesOverlap(left1-10, top1-10, width1+20, height1+20, left2-10, 
-            top2-10, width2+20, height2+20) and enemy.type == 'physical'
+            top2-10, width2+20, height2+20) 
             and app.counter == 10):
-            enemy.color = 'red'
             hitChance = random.randint(0, 1)
             if hitChance == 0:
                 # mc is hit
@@ -417,8 +350,6 @@ def combat_onStep(app):
                 if app.mc.health <= 0:
                     app.mc.health = 0
                     app.gameOver = True
-        elif enemy.type == 'physical':
-            enemy.color = 'pink'
         for arrow in app.arrows:
             arrow.move()
             if not canMove(app, arrow.hitbox):
@@ -492,21 +423,21 @@ def combat_onKeyHold(app, keys):
     if app.gameOver or app.win: return
     # mc movement
     if 'up' in keys or 'w' in keys:
-        app.mc.move(0, -1 * app.characterSpeed)
+        app.mc.move(0, -1 * app.characterSpeed, app)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(0, app.characterSpeed)
+            app.mc.move(0, app.characterSpeed, app)
     if 'down' in keys or 's' in keys: 
-        app.mc.move(0, app.characterSpeed)
+        app.mc.move(0, app.characterSpeed, app)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(0, -1 * app.characterSpeed)
+            app.mc.move(0, -1 * app.characterSpeed, app)
     if 'right' in keys or 'd' in keys:
-        app.mc.move(app.characterSpeed, 0)
+        app.mc.move(app.characterSpeed, 0, app)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(-1 * app.characterSpeed, 0)
+            app.mc.move(-1 * app.characterSpeed, 0, app)
     if 'left' in keys or 'a' in keys:
-        app.mc.move(-1 * app.characterSpeed, 0)
+        app.mc.move(-1 * app.characterSpeed, 0, app)
         if not canMove(app, app.mc.hitbox):
-            app.mc.move(app.characterSpeed, 0)
+            app.mc.move(app.characterSpeed, 0, app)
 
 def canMove(app, entity):
     if app.stage != 'red' and app.stage != 'combat':
@@ -547,7 +478,7 @@ def combat_redrawAll(app):
     else:
         if app.isBoss:
             if app.boss.health <= 25 and app.boss.health > 0:
-                app.boss.lastDitchAttack(app)
+                app.boss.lastDitchAttack()
             if distance(app.boss.cx, app.boss.cy, app.mc.cx, app.mc.cy) <= 160:
                 app.mc.attackPower = 20
                 if 0 <= app.counter < 15:
@@ -887,13 +818,13 @@ def candle_redrawAll(app):
         drawLabel('!! ALERT: ENEMIES APPROACHING !!', app.width/2, 200, fill='darkred', size=30, bold=True)
 def candle_onKeyHold(app, keys):
     if 'right' in keys or 'd' in keys:
-        app.moonMC.move(app.characterSpeed, 0)
+        app.moonMC.move(app.characterSpeed, 0, app)
         if not canMove(app, app.moonMC.hitbox):
-            app.moonMC.move(-1 * app.characterSpeed, 0)
+            app.moonMC.move(-1 * app.characterSpeed, 0, app)
     if 'left' in keys or 'a' in keys:
-        app.moonMC.move(-1 * app.characterSpeed, 0)
+        app.moonMC.move(-1 * app.characterSpeed, 0, app)
         if not canMove(app, app.moonMC.hitbox):
-            app.moonMC.move(app.characterSpeed, 0)
+            app.moonMC.move(app.characterSpeed, 0, app)
 
 def candle_onKeyPress(app, key):
     if app.candleCenter-50 <= app.moonMC.cx <= app.candleCenter + 50 and key =='f':
