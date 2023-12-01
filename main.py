@@ -304,6 +304,7 @@ def onAppStart(app):
 
     app.skillCounter = 60
     app.skillReady = True
+    app.customColor = rgb(176, 120, 30) # orange-gold color
 
     # bounds for enemy / oxygen spawn points
     app.horizLeft, app.horizRight = 50, 550
@@ -494,7 +495,7 @@ def combat_redrawAll(app):
             app.boss.draw(app)
             app.boss.drawHealth()
         elif app.bossKilled:
-            # boss explodes and deals a large amount of dmg              
+            # boss explodes and deals continuous dmg if player touches it             
             drawCircle(app.width/2, app.height/2, 100, fill='orange')
             if distance(app.width/2, app.height/2, app.mc.cx, app.mc.cy) <= 110:
                 app.mc.health -= 1
@@ -505,7 +506,7 @@ def combat_redrawAll(app):
                 enemy.attack(app)
         for arrow in app.arrows:
             arrow.draw(app)
-        if app.counter == 10 and len(app.oxygen) <= 5:
+        if app.counter == 10 and len(app.oxygen) <= 6:
             addOxygen(app)
         for oxygenX, oxygenY in app.oxygen:
             width, height = getImageSize(CMUImage(app.bubbleImage))
@@ -515,13 +516,14 @@ def combat_redrawAll(app):
         drawSkill(app)
 
 def drawSkill(app):
-    drawCircle(550, 400, 50, fill=rgb(176, 120, 30), border='gold')
+    skillX, skillY = 550, 400
+    drawCircle(skillX, skillY, 50, fill=app.customColor, border='gold')
     if app.skillReady:
         status1, status2 = 'SKILL', 'READY'
     else:
         status1, status2 = 'COOLING','DOWN'
-    drawLabel(f'{status1}', 550, 390, fill='gold', size=20, bold=True)
-    drawLabel(f'{status2}', 550, 410, fill='gold', size=20, bold=True)
+    drawLabel(f'{status1}', skillX, skillY - 10, fill='gold', size=20, bold=True)
+    drawLabel(f'{status2}', skillX, skillY + 10, fill='gold', size=20, bold=True)
 
 def addOxygen(app):
     newX = random.randint(app.horizLeft, app.horizRight)
@@ -532,22 +534,22 @@ def generateObstacle(app):
     index = random.randint(0, 2)
     obstacle = app.potentialObstacles[index]
     startX, startY, width, height = obstacle
-    x, y = random.randint(app.horizLeft, app.horizRight), random.randint(app.vertTop, app.vertBot)
+    x = random.randint(app.horizLeft, app.horizRight)
+    y = random.randint(app.vertTop, app.vertBot)
     return (x, y, width, height)
-
-#--------------
+#----------------------------------PAUSE SCREEN--------------------------------# 
 def pause_onKeyPress(app, key):
     if key == 'p':
         setActiveScreen('combat')
 
 def pause_redrawAll(app):
     drawRect(0, 0, app.width, app.height)
-    drawLabel('PAUSED.', app.width/2, 100, fill=rgb(176, 120, 30), 
+    drawLabel('PAUSED.', app.width/2, 100, fill=app.customColor, 
               bold=True, size=30)
     drawRect(app.width/2 - 100, 200, 200, 50, fill='moccasin')
     drawRect(app.width/2 - 100, 275, 200, 50, fill='moccasin')
-    drawLabel('resume', app.width/2, 225, fill=rgb(176, 120, 30), size=20)
-    drawLabel('quit', app.width/2, 300, fill=rgb(176, 120, 30), size=20)
+    drawLabel('resume', app.width/2, 225, fill=app.customColor, size=20)
+    drawLabel('quit', app.width/2, 300, fill=app.customColor, size=20)
 
 def pause_onMousePress(app, mx, my):
     if app.width/2-100 <= mx <= app.width/2+100 and 200 <= my <= 250:
@@ -557,7 +559,7 @@ def pause_onMousePress(app, mx, my):
 #--------------
 def titleScreen_redrawAll(app):
     drawImage(CMUImage(app.titleImage), 0, 0)
-    drawRect(app.width - 98, app.height - 98, 75, 75, borderWidth=5, border=rgb(176, 120, 30), fill=None)
+    drawRect(app.width - 98, app.height - 98, 75, 75, borderWidth=5, border=app.customColor, fill=None)
 
 def titleScreen_onMousePress(app, mx, my):
     if 115 <= mx <= 215 and app.height/2 - 40 <= my <= app.height/2+40:
@@ -570,13 +572,13 @@ def titleScreen_onMousePress(app, mx, my):
 #--------------
 def settings_redrawAll(app):
     drawImage(CMUImage(app.settingsImage), 0, 0)
-    drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
+    drawRect(80, 350, 50, 50, fill=None, border=app.customColor, borderWidth=5)
     drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
     drawLine(app.width/2 - 100, app.height/2, app.width/2+100, app.height/2, fill='saddleBrown', lineWidth=5)
-    drawCircle(app.width/2-100 +20*app.characterSpeed, app.height/2, 7, fill=rgb(176, 120, 30))
+    drawCircle(app.width/2-100 +20*app.characterSpeed, app.height/2, 7, fill=app.customColor)
     drawRect(app.width/2-150, app.height/2 - 12.5, 25, 25, fill='saddleBrown')
     drawRect(app.width/2+125, app.height/2 - 12.5, 25, 25, fill='saddleBrown')
-    drawLabel(f'CHARACTER SPEED: {app.characterSpeed}', app.width/2, app.height/2 - 30, fill=rgb(176, 120, 30), size=17, bold=True)
+    drawLabel(f'CHARACTER SPEED: {app.characterSpeed}', app.width/2, app.height/2 - 30, fill=app.customColor, size=17, bold=True)
     drawLabel('_', app.width/2-137.5, app.height/2-2.5, fill='white', size=20, bold=True)
     drawLabel('+', app.width/2+137.5, app.height/2, fill='white', size=20, bold=True)
 
@@ -594,7 +596,7 @@ def settings_onMousePress(app, mx, my):
 #--------------
 def tutorial_redrawAll(app):
     drawImage(CMUImage(app.tutorialImage), 0, 0)
-    drawRect(80, 350, 50, 50, fill=None, border=rgb(176, 120, 30), borderWidth=5)
+    drawRect(80, 350, 50, 50, fill=None, border=app.customColor, borderWidth=5)
     drawLabel('⌂', 105, 375, font='symbols', fill='moccasin', size=30, bold=True)
     drawLabel('1. Use WASD or arrow keys to move.', 150, 200, fill='moccasin', 
               size=15, align='left', bold=True)
@@ -636,10 +638,10 @@ def win_redrawAll(app):
     if app.phase == 3:
         drawImage(CMUImage(app.phaseThreeWin), 0, 0)
 
-    drawLabel('NEXT PHASE', app.width/2, app.height/2 + 100, fill=rgb(176, 120, 30), size=25)
+    drawLabel('NEXT PHASE', app.width/2, app.height/2 + 100, fill=app.customColor, size=25)
     if app.phase == 4:
         drawImage(CMUImage(app.victoryImage), 0, 0)
-        drawRect(app.width/2 - 100, app.height/2 + 50, 200, 50, fill=rgb(176, 120, 30))
+        drawRect(app.width/2 - 100, app.height/2 + 50, 200, 50, fill=app.customColor)
         drawLabel('RETURN HOME', app.width/2, app.height/2 +75, fill='darkblue', size=20, bold=True)
 def win_onMousePress(app, mx, my):
     if app.width/2 - 40 <= mx <= app.width/2 + 40 and app.height/2 - 40 <= my <= app.height/2 + 40 and app.phase != 4:
@@ -653,16 +655,16 @@ def win_onMousePress(app, mx, my):
 def phaseSelection_redrawAll(app):
     color1 = color2 = color3 = color4 = None
     if app.phase == 1:
-        color1 = rgb(176, 120, 30)
+        color1 = app.customColor
         color2 = color3 = color4 = 'burlyWood'
     elif app.phase == 2:
-        color2 = rgb(176, 120, 30)
+        color2 = app.customColor
         color1 = color3 = color4 = 'burlyWood'
     elif app.phase == 3:
-        color3 = rgb(176, 120, 30)
+        color3 = app.customColor
         color1 = color2 = color4 = 'burlyWood'
     elif app.phase == 4:
-        color4 = rgb(176, 120, 30)
+        color4 = app.customColor
         color1 = color2 = color3 = 'burlyWood'
     drawRect(0, 0, 640, 480)
     drawLabel('PHASE SELECTION', app.width/2, 50, fill=color1, size=30)
@@ -698,7 +700,7 @@ def phaseOne_redrawAll(app):
     drawArc(app.width/2, app.height/2, 190, 190, 90, 180, fill='black')
     drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
     drawLabel('BEGIN', app.width/2, app.height - 75, 
-              fill=rgb(176, 120, 30), size=20)
+              fill=app.customColor, size=20)
 
 def phaseOne_onMousePress(app, mx, my):
     if app.width/2-50 <= mx <= app.width/2+50 and \
@@ -711,7 +713,7 @@ def phaseTwo_redrawAll(app):
     drawLabel('FULL MOON', app.width/2, 75, fill='white', bold=True, size=30)
     drawCircle(app.width/2, app.height/2, 100, fill='white')
     drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
-    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=app.customColor, size=20)
 
 def phaseTwo_onMousePress(app, mx, my):
     if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
@@ -730,7 +732,7 @@ def phaseThree_redrawAll(app):
     drawCircle(app.width/2, app.height/2, 100, fill=None, border=color, borderWidth=5)
     drawArc(app.width/2, app.height/2, 200, 200, 90, 180, fill=color)
     drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
-    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=app.customColor, size=20)
 
 def phaseThree_onMousePress(app, mx, my):
     if app.width/2-50 <= mx <= app.width/2+50 and app.height-100 <= my <= app.height-50:
@@ -742,7 +744,7 @@ def phaseFour_redrawAll(app):
     drawLabel('NEW MOON', app.width/2, 75, fill='white', bold=True, size=30)
     drawCircle(app.width/2, app.height/2, 100, fill=None, border='white')
     drawRect(app.width/2-50, app.height-100, 100, 50, fill='white')
-    drawLabel('BEGIN', app.width/2, app.height - 75, fill=rgb(176, 120, 30), size=20)
+    drawLabel('BEGIN', app.width/2, app.height - 75, fill=app.customColor, size=20)
 
 def phaseFour_onMousePress(app, mx, my):
     if app.width/2-50 <= mx <= app.width/2+50 and \
