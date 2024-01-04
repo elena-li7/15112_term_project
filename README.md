@@ -1,6 +1,6 @@
 CMU_15112_term_project
 
-Link to demo video: https://youtu.be/VdHyCgB_Aj0
+[Link]([url](https://youtu.be/VdHyCgB_Aj0)) to demo video
 
 Moonlight Archer:
 This project is inspired by the story of Chang’e (the Moon Goddess) and 
@@ -21,7 +21,7 @@ There is a main storyline with a final Boss, as well as a random special
 event (blood moon) that increases game difficulty.
 
 This project runs through the file 'main.py'. Please ensure that cmu_graphics is
-installed (download available at https://academy.cs.cmu.edu/desktop) and that all 
+installed (download available [here]([url](https://academy.cs.cmu.edu/desktop))) and that all 
 images are downloaded in the same folder before attempting to run this game.
 
 No additional libraries need to be installed.
@@ -32,3 +32,8 @@ Shortcut commands (reference the tutorial page for more controls):
 - If you want to jump to specific phases, go to line 562 in 'main.py' and set
     app.phase equal to 1-4, depending on which phase you would like to see. The
     default value for this is 1.
+
+Additional Links:
+- [Project Proposal]([url](https://docs.google.com/document/d/1srIKtBnRqJBH4gL3EVBQtlvp954QSG5iLe-hQp18HLw/edit?usp=sharing))
+- [Storyboard]([url](https://docs.google.com/document/d/1-XVvWejR3O9b0c9hQO0YP5QcZiO1b0cPRibPcw_89ek/edit?usp=sharing))
+- [Citations]([url](https://docs.google.com/document/d/1PlhXKqxFD4J7FAnjVSvf9_D9dbcxAAfM9ZG_3zGtc_E/edit?usp=sharing)https://docs.google.com/document/d/1PlhXKqxFD4J7FAnjVSvf9_D9dbcxAAfM9ZG_3zGtc_E/edit?usp=sharing)
