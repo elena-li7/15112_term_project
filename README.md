@@ -1,7 +1,34 @@
-# 15112_term_project
+CMU_15112_term_project
 
-This project is inspired by the story of Chang’e (the Moon Goddess) and Houyi (the Archer) from Chinese mythology, as well as the novel Daughter of the Moon Goddess by Sue Lynn Tan. It is said that after stealing an elixir of immortality, Chang’e was imprisoned on the Moon and left with the task of lighting candles to illuminate the Moon’s surface. Houyi, her mortal lover, was a renowned archer who protected the Earth.
+Link to demo video: https://youtu.be/VdHyCgB_Aj0
 
-Enter you, the main character. As a child of Chang’e and Houyi, you have been entrusted to light up candles on the moon while defending them from vengeful spirits. But due to your mortal body and the limitations of physics, you must monitor both your and the candles’ oxygen levels. 
+Moonlight Archer:
+This project is inspired by the story of Chang’e (the Moon Goddess) and 
+Houyi (the Archer) from Chinese mythology, as well as the novel 
+Daughter of the Moon Goddess by Sue Lynn Tan. It is said that after stealing an
+elixir of immortality, Chang’e was imprisoned on the Moon and left with the task 
+of lighting candles to illuminate the Moon’s surface. Houyi, her mortal lover, 
+was a renowned archer who protected the Earth.
 
-The game will feature real-time, run-and-gun combat where you, an archer, fight through several Moon ‘phases.’ Use power-ups and skills to enhance your fighting abilities. There will be a main storyline with a final Boss, as well as an infinite combat game mode. There will also be several random special events (e.g. lunar eclipse, blood moon) that increase difficulty.
+Enter you, the main character. As a child of Chang’e and Houyi, you have been 
+entrusted to light up candles on the moon while defending them from vengeful 
+spirits. But due to physical limitations, you must maintain your oxygen levels 
+with randomly generated oxygen supplies.
+
+The game features real-time combat where you, an archer, fight through 
+several Moon ‘phases.’ Skills can be used to enhance your fighting abilities. 
+There is a main storyline with a final Boss, as well as a random special 
+event (blood moon) that increases game difficulty.
+
+This project runs through the file 'main.py'. Please ensure that cmu_graphics is
+installed and that all images are downloaded in the same folder before 
+attempting to run this game.
+
+No additional libraries need to be installed.
+
+Shortcut commands (reference the tutorial page for more controls):
+- While in combat mode, press 'p' or click on the pause button at the top-left
+    of the page to pause the game.
+- If you want to jump to specific phases, go to line 562 in 'main.py' and set
+    app.phase equal to 1-4, depending on which phase you would like to see. The
+    default value for this is 1.
