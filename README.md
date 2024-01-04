@@ -21,8 +21,8 @@ There is a main storyline with a final Boss, as well as a random special
 event (blood moon) that increases game difficulty.
 
 This project runs through the file 'main.py'. Please ensure that cmu_graphics is
-installed and that all images are downloaded in the same folder before 
-attempting to run this game.
+installed (download available at https://academy.cs.cmu.edu/desktop) and that all 
+images are downloaded in the same folder before attempting to run this game.
 
 No additional libraries need to be installed.
 
